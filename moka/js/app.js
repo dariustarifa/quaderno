@@ -571,7 +571,7 @@
       const key = parts[0] === "u" ? `u${parts[1]}/${parts[2] || ""}/${parts[2] === "p" ? parts[3] : ""}` : parts.join("/");
       const changed = this.lastKey !== null && key !== this.lastKey;
       this.lastKey = key;
-      if (this.pendingParty) return; // la celebración tiene prioridad sobre la transición
+      if (this.pendingParty || Boot.active) return; // la carga y la celebración tienen prioridad sobre la transición
       if (changed) this.play("is-run", 1700);
     },
     // Celebración: una sola vez por logro (unidad o nivel superados).
@@ -595,7 +595,7 @@
         this.node = document.createElement("div");
         this.node.className = "mk-loader";
         this.node.setAttribute("role", "status");
-        this.node.innerHTML = `<div class="mk-loader-moka">${mokaSvg("mk-load", "Moka preparando la página")}</div><p class="mk-loader-pct" hidden></p><p class="mk-loader-msg">Preparando el café…</p>`;
+        this.node.innerHTML = `<div class="mk-steam" aria-hidden="true"><i></i><i></i><i></i></div><div class="mk-loader-moka">${mokaSvg("moka-load", "Moka preparando la página")}</div><p class="mk-loader-word" aria-hidden="true">Moka</p><p class="mk-loader-pct" hidden></p><p class="mk-loader-msg">Preparando el café…</p><p class="mk-loader-foot">Un café, una unidad</p>`;
         document.body.appendChild(this.node);
       }
       this.set(null);
@@ -615,7 +615,7 @@
       pct.hidden = false;
       pct.textContent = `${Math.round(frac * 100)} %`;
       m.style.setProperty("--p", frac);
-      this.node.querySelector(".mk-loader-msg").textContent = frac >= 1 ? "¡Listo!" : "Cargando la unidad…";
+      this.node.querySelector(".mk-loader-msg").textContent = frac >= 1 ? "¡Listo!" : "Preparando el café…";
     },
     hide(hold) {
       if (!this.node) return Promise.resolve();
@@ -630,13 +630,42 @@
       );
     },
   };
+  const Boot = {
+    active: false,
+    font: 0,
+    view: 0,
+    start() {
+      this.active = true;
+      Loader.show();
+      this.update();
+      const fontDone = () => {
+        this.font = 1;
+        this.update();
+      };
+      // Sin conexión la fuente puede no llegar nunca: a los 2,5 s se da por hecha (se usa la del sistema).
+      this.fonts = Promise.race([document.fonts ? document.fonts.load('900 40px "Archivo"') : Promise.resolve(), new Promise((r) => setTimeout(r, 2500))]).then(fontDone, fontDone);
+    },
+    update() {
+      if (this.active) Loader.set((this.font + this.view) / 2);
+    },
+    async viewReady() {
+      this.view = 1;
+      this.update();
+      await this.fonts;
+      await Loader.hide(500); // al 100 % se mantiene un instante y aparece la página
+      this.active = false;
+      Moka.play("is-run", 1700);
+    },
+  };
   async function loadScript(url) {
     let shown = false;
     let measurable = false;
-    const timer = setTimeout(() => {
-      shown = true;
-      Loader.show();
-    }, 250);
+    const timer = Boot.active
+      ? 0
+      : setTimeout(() => {
+          shown = true;
+          Loader.show();
+        }, 250);
     try {
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(res.status);
@@ -653,6 +682,10 @@
           chunks.push(value);
           got += value.length;
           if (shown) Loader.set(Math.min(1, got / total));
+          else if (Boot.active) {
+            Boot.view = Math.min(0.95, got / total);
+            Boot.update();
+          }
         }
         text = new TextDecoder().decode(await new Blob(chunks).arrayBuffer());
       } else text = await res.text();
@@ -704,7 +737,7 @@
     const ex = (S.levelExam || {})[L.id];
     document.title = L.title;
     $app.innerHTML = `${topbar(L.title, `${L.minutes} ${t("minutos", "minuti")} · ${L.parts.length} ${t("partes", "parti")}`, "#/")}
-      <div class="page-head mk-head"><div><h2 class="display">${esc(L.title)}</h2><p>${esc(L.hint)}</p></div><div class="mk-mini">${mokaSvg("mk-level")}</div></div>
+      <div class="page-head mk-head"><div><h2 class="display">${esc(L.title)}</h2><p>${esc(L.hint)}</p></div><div class="mk-mini">${mokaSvg("moka-level")}</div></div>
       ${supportNotice(U.blocks)}
       <div class="enter">${U.parts
         .map(
@@ -1006,9 +1039,8 @@
         const pct = Math.round((passedN / lvUnits.length) * 100);
         return `<details class="level-panel" data-level="${lv.id}" ${S.open[lv.id] ? "open" : ""}>
           <summary>
-            <span class="level-id">${lv.id}</span>
-            <span class="level-text"><span class="level-name">${esc(lv.name)}</span><span class="small muted num">${lvUnits.length} unidades · ${passedN} superadas</span>
-            <span class="level-bar" aria-hidden="true"><span style="width:${pct}%"></span></span></span>
+            <span class="level-text"><span class="level-name">Nivel ${pad(C.levels.indexOf(lv) + 1)} · ${esc(lv.name)}</span><span class="level-id">${lv.id}</span></span>
+            <span class="level-count"><span class="num">${passedN} / ${lvUnits.length}</span><span class="level-bar" aria-hidden="true"><span style="width:${pct}%"></span></span></span>
             <span class="chev" aria-hidden="true">${I.right}</span>
           </summary>
           <div class="level-body">${rows}${examRow}</div>
@@ -1016,7 +1048,7 @@
       })
       .join("");
 
-    $app.innerHTML = `<header class="mk-hero"><p class="mk-meta"><span>Italiano · A1 → B2</span><span>${C.units.length} unidades</span></p><div class="mk-title"><h1>Moka</h1><div class="mk-perch">${mokaSvg("mk-home")}</div></div><p class="mk-lede">Un café, una unidad. Italiano de cero a B2, a tu ritmo.</p></header>
+    $app.innerHTML = `<header class="mk-hero"><p class="mk-meta"><span>Italiano · A1 → B2</span><span>${C.units.length} unidades</span></p><div class="mk-title"><h1>Moka</h1><div class="mk-perch">${mokaSvg("moka-home")}</div></div><p class="mk-lede">Un café, una unidad. Italiano de cero a B2, a tu ritmo.</p></header>
       <h2 class="section-title">Temario<span>Toca un nivel para ver sus unidades</span></h2>
       <div class="levels enter">${levels}</div>
       <section class="settings">
@@ -1297,31 +1329,25 @@
     const d = doneCount(u.n);
     const step = nextStep(u.n, u.pages.length);
     const ex = S.exam[u.n];
-    const pages = u.pages
-      .map((p, i) => {
-        const done = S.done[`u${u.n}.p${i + 1}`];
-        return `<a class="unit-row" href="#/u/${u.n}/p/${i + 1}">
-          <span class="n num">${pad(i + 1)}</span><span class="unit-row-text"><span class="unit-row-name">${esc(p.title)}</span><span class="goal">${skillLabel(p.skill)}</span></span>${done ? `<span class="check" aria-label="${t("Hecha", "Fatta")}">${I.check}</span>` : `<span class="ring" aria-hidden="true"></span>`}</a>`;
-      })
-      .join("");
-    const examTile = `<a class="unit-row exam-row" href="#/u/${u.n}/exam">
-      <span class="n">${t("Ex", "Es")}</span><span class="unit-row-text"><span class="unit-row-name">Examen</span><span class="goal">${t("Sin buscar nada. Aprobado con 70 sobre 100.", "Senza cercare niente. Superato con 70 su 100.")}</span></span>${
-        ex ? `<span class="badge" ${ex.score >= 70 ? 'data-state="watch"' : 'data-state="warn"'}>${ex.score}</span>` : `<span class="ring" aria-hidden="true"></span>`
-      }</a>`;
-
+    const lvName = C.levels.find((l) => l.id === u.level)?.name || "";
+    const inLevel = C.units.filter((x) => x.level === u.level);
     $app.innerHTML = `<header class="mk-unit" data-level="${u.level}">
-        <div class="mk-unit-top"><a class="mk-back" href="#/" aria-label="Volver al temario">${I.left}<span>${u.level} · ${esc(C.levels.find((l) => l.id === u.level)?.name || "")}</span></a><span class="mk-meta-n">Unidad ${pad(u.n)}</span></div>
-        <div class="mk-unit-body"><h1 class="mk-unit-title">${esc(u.title)}</h1><div class="mk-unit-moka">${mokaSvg("mk-unit")}</div></div>
+        <div class="mk-unit-top"><a class="mk-pill" href="#/" aria-label="Volver al temario">${I.left}<span>${u.level} · Temario</span></a><span class="mk-label">N° ${pad(inLevel.findIndex((x) => x.n === u.n) + 1)} / ${inLevel.length}</span></div>
+        <p class="mk-eyebrow">Unidad ${pad(u.n)} · ${esc(lvName)}</p>
+        <div class="mk-unit-body"><h1 class="mk-unit-title">${esc(u.title)}</h1><div class="mk-unit-moka">${mokaSvg("moka-unit")}</div></div>
         <p class="mk-unit-goal">${esc(u.goal)}</p>
+        <div class="mk-unit-count"><span class="mk-count">${d}<span> / ${u.pages.length} páginas</span></span><span class="mk-segs" aria-hidden="true">${u.pages.map((_, i) => `<i ${S.done[`u${u.n}.p${i + 1}`] ? "data-done" : ""}></i>`).join("")}<i ${examPassed(u.n) ? "data-done" : ""}></i></span></div>
       </header>
-      <div class="bento enter">
-        <div class="tile tile-lead" style="--i:0">
-          <div class="figure lg num">${d}<span class="of">/ ${u.pages.length} ${t("páginas hechas", "pagine fatte")}</span></div>
-          <div class="progress" aria-hidden="true">${u.pages.map((_, i) => `<span ${S.done[`u${u.n}.p${i + 1}`] ? "data-done" : ""}></span>`).join("")}<span ${examPassed(u.n) ? "data-done" : ""}></span></div>
-          <div class="row-actions"><a class="btn-primary" href="${step.href}">${d ? t("Continuar", "Continua") : t("Empezar", "Comincia")} · ${step.label} ${I.right}</a><a class="btn-quiet" href="#/u/${u.n}/print">${I.print}${t("Exportar PDF", "Esporta PDF")}</a></div>
-        </div>
-      </div>
-      <div class="unit-list enter">${pages}${examTile}</div>`;
+      <ol class="mk-list enter">${u.pages
+        .map((p, i) => {
+          const done = S.done[`u${u.n}.p${i + 1}`];
+          return `<li><a class="mk-row ${done ? "is-done" : ""}" href="#/u/${u.n}/p/${i + 1}"><span class="mk-row-n">${pad(i + 1)}</span><span class="mk-row-t">${esc(p.title)}</span><span class="mk-row-s">${done ? "Hecha" : skillLabel(p.skill)}</span></a></li>`;
+        })
+        .join("")}
+        <li><a class="mk-row ${examPassed(u.n) ? "is-done" : ""}" href="#/u/${u.n}/exam"><span class="mk-row-n">Ex</span><span class="mk-row-t">Examen</span><span class="mk-row-s">${ex ? `${ex.score} / 100` : "Aprobado con 70"}</span></a></li>
+        <li><a class="mk-row" href="#/u/${u.n}/print"><span class="mk-row-n">${I.print}</span><span class="mk-row-t">Exportar PDF</span><span class="mk-row-s">Para imprimir o el lápiz</span></a></li>
+      </ol>
+      <nav class="mk-dock" aria-label="Seguir"><a class="mk-cta" href="${step.href}"><span>${d ? "Continuar" : "Empezar"} · ${step.label}</span>${I.right}</a></nav>`;
   }
 
   function progressBar(u, current) {
@@ -1351,8 +1377,8 @@
     const prev = idx > 1 ? { href: `#/u/${u.n}/p/${idx - 1}`, t: u.pages[idx - 2].title } : null;
     const next = idx < u.pages.length ? { href: `#/u/${u.n}/p/${idx + 1}`, t: u.pages[idx].title } : { href: `#/u/${u.n}/exam`, t: "Examen" };
 
-    $app.innerHTML = `${topbar(`Unidad ${u.n} · ${u.title}`, `${t("Página", "Pagina")} ${idx} ${t("de", "di")} ${u.pages.length} · ${skillLabel(p.skill)}`, `#/u/${u.n}`, progressBar(u, idx))}
-      <div class="page-head mk-head"><h2 class="display">${esc(p.title)}</h2><div class="mk-mini">${mokaSvg("mk-page")}</div></div>
+    $app.innerHTML = `<header class="mk-ph"><div class="mk-ph-top"><a class="mk-pill" href="#/u/${u.n}">${I.left}<span>Unidad ${pad(u.n)}</span></a><span class="mk-label">${skillLabel(p.skill)} · ${u.level}</span></div>${progressBar(u, idx)}</header>
+      <div class="mk-title-row"><span class="mk-title-n">${pad(idx)}</span><h1 class="mk-big">${esc(p.title)}</h1><div class="mk-mini">${mokaSvg("moka-page")}</div></div>
       ${supportNotice(p.blocks)}
       <div class="enter">${p.blocks.map((b, bi) => renderBlock(b, bi, scope, u)).join("")}</div>
       <div class="page-foot">
@@ -1364,7 +1390,8 @@
       <nav class="pager">
         ${prev ? pagerTile(prev.href, t("Anterior", "Precedente"), prev.t, "prev") : ""}
         ${pagerTile(next.href, t("Siguiente", "Successiva"), next.t, "next")}
-      </nav>`;
+      </nav>
+      <nav class="mk-dock" aria-label="Página"><button type="button" class="mk-dock-btn" data-act="correct" data-scope="${scope}">Copiar para corregir</button><a class="mk-cta" href="${next.href}"><span>${esc(next.t)}</span>${I.right}</a></nav>`;
   }
 
   function viewExam(u) {
@@ -1372,8 +1399,9 @@
     document.title = `Examen · Unidad ${u.n}`;
     const scope = `u${u.n}.exam`;
     const ex = S.exam[u.n];
-    $app.innerHTML = `${topbar(`Unidad ${u.n} · ${u.title}`, t("Examen", "Esame"), `#/u/${u.n}`, progressBar(u, "exam"))}
-      <div class="page-head mk-head"><div><h2 class="display">Examen</h2><p>${esc(e.hint)}</p></div><div class="mk-mini">${mokaSvg("mk-exam")}</div></div>
+    $app.innerHTML = `<header class="mk-ph"><div class="mk-ph-top"><a class="mk-pill" href="#/u/${u.n}">${I.left}<span>Unidad ${pad(u.n)}</span></a><span class="mk-label">Examen · ${u.level}</span></div>${progressBar(u, "exam")}</header>
+      <div class="mk-title-row"><span class="mk-title-n">Ex</span><h1 class="mk-big">Examen</h1><div class="mk-mini">${mokaSvg("moka-exam")}</div></div>
+      <p class="mk-hint">${esc(e.hint)}</p>
       ${supportNotice(e.blocks)}
       <div class="enter">${e.blocks.map((b, bi) => renderBlock(b, bi, scope, u)).join("")}</div>
       <div class="page-foot">
@@ -1533,6 +1561,8 @@
       else if (parts[2] === "print") viewPrint(u);
       else viewUnit(u);
     }
+    const lvNow = parts[0] === "level" ? parts[1] : parts[0] === "u" ? C.units.find((x) => x.n === +parts[1])?.level : "";
+    document.documentElement.dataset.level = lvNow || "";
     renderChrome(parts);
     window.scrollTo(0, 0);
     Moka.arrive(parts);
@@ -1732,6 +1762,9 @@
     }
   });
 
-  router();
+  // Arranque: pantalla de carga con Moka. El progreso es real: tipografía cargada + primera pantalla lista
+  // (si hay que descargar una unidad, cuenta los bytes recibidos).
+  Boot.start();
+  router().finally(() => Boot.viewReady());
   if (Sync.on) Sync.pull();
 })();
