@@ -1,7 +1,7 @@
 /* Service worker del Quaderno: guarda todo el cuaderno en el móvil para usarlo sin conexión.
    Estrategia: primero la red (así ves siempre la última versión); si no hay conexión, la copia guardada.
    Al cambiar archivos compartidos, sube VERSION para renovar la copia. */
-const VERSION = "quaderno-v3";
+const VERSION = "quaderno-v4";
 const pad = (n) => String(n).padStart(2, "0");
 const FILES = [
   "./",

@@ -87,6 +87,10 @@
     print: svg('<path d="M7 9V4h10v5"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v6H7z"/>'),
     eye: svg('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
     chat: svg('<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/>'),
+    pen: svg('<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>'),
+    eraser: svg('<path d="M8 20h12"/><path d="M4.5 15.5l9-9a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L12 18H7.5z"/>'),
+    undo: svg('<path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12h-2" transform="translate(0 -6)"/>'),
+    hand: svg('<path d="M8 13V6a1.5 1.5 0 0 1 3 0v5"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11V6a1.5 1.5 0 0 1 3 0v7a7 7 0 0 1-7 7h-.5a6 6 0 0 1-4.6-2.2L3 15.5a1.6 1.6 0 0 1 2.4-2.1L8 16"/>'),
   };
 
   /* ---------- Voz italiana (síntesis) ---------- */
@@ -625,7 +629,7 @@
         <div class="cover"><p>Quaderno · Italiano ${esc(L.id)}</p><h1>${esc(L.title)}</h1><p>${esc(L.hint)}</p><p style="font-size:.875rem">Nome: ______________________ &nbsp; Data: ____________ &nbsp; Voto: ______ / 100</p></div>
         ${sections.join("")}
         ${appendix ? `<section class="pg"><div class="pg-title"><h2>Trascrizioni</h2><span>Per chi corregge</span></div>${appendix}</section>` : ""}
-      </article>`;
+      </article>`;    setupInk(scope, blank);
   }
 
   /* ---------- Progreso ---------- */
@@ -638,11 +642,197 @@
 
   /* Barra de la vista PDF: volver, qué imprimir y guardar. Compacta para el móvil. */
   function printBar(back, blank) {
+    const inkTools = INK.on
+      ? `<div class="ink-tools" role="toolbar" aria-label="${t("Lápiz", "Matita")}">
+          ${INK_COLORS.map((c) => `<button type="button" class="ink-color" data-act="inkcolor" data-color="${c.v}" style="--c:${c.v}" aria-label="${c.n}" aria-pressed="${!INK.eraser && INK.color === c.v}"></button>`).join("")}
+          <button type="button" class="ink-tool" data-act="inkeraser" aria-pressed="${INK.eraser}" aria-label="${t("Goma", "Gomma")}">${I.eraser}</button>
+          <button type="button" class="ink-tool" data-act="inkundo" aria-label="${t("Deshacer", "Annulla")}">${I.undo}</button>
+          <button type="button" class="ink-tool" data-act="inkfinger" aria-pressed="${INK.finger}" aria-label="${t("Dibujar también con el dedo", "Disegna anche con il dito")}">${I.hand}</button>
+          <button type="button" class="ink-clear" data-act="inkclear">${t("Borrar trazos", "Cancella tratti")}</button>
+          <p class="ink-hint">${t("Escribe con el Apple Pencil o el ratón; con el dedo te desplazas (o activa la mano para dibujar con él). Al terminar, pulsa PDF y adjunta el archivo en ChatGPT, Claude o Gemini.", "Scrivi con l'Apple Pencil o il mouse; con il dito scorri (o attiva la mano per disegnare). Alla fine premi PDF e allega il file in ChatGPT, Claude o Gemini.")}</p>
+        </div>`
+      : "";
     return `<div class="print-bar">
       <a class="icon-btn" href="${back}" aria-label="${t("Volver", "Indietro")}">${I.left}</a>
       <div class="seg" role="group" aria-label="${t("Qué imprimir", "Che cosa stampare")}"><button type="button" data-act="printmode" data-mode="answers" aria-pressed="${!blank}">${t("Respuestas", "Con risposte")}</button><button type="button" data-act="printmode" data-mode="blank" aria-pressed="${blank}">${t("En blanco", "In bianco")}</button></div>
+      <button type="button" class="icon-btn ink-toggle" data-act="ink" aria-pressed="${INK.on}" aria-label="${t("Lápiz", "Matita")}">${I.pen}</button>
       <button class="btn-primary print-btn" data-act="print" aria-label="${t("Guardar como PDF", "Salva come PDF")}">${I.print}<span>PDF</span></button>
+      ${inkTools}
     </div>`;
+  }
+
+  /* ---------- Lápiz digital sobre la hoja (vista PDF) ----------
+     La hoja se pinta a ancho A4 (como al imprimir) para que los trazos caigan en el mismo sitio en
+     pantalla y en el PDF. Cada página del cuaderno guarda sus trazos en coordenadas propias. */
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const INK_COLORS = [
+    { v: "#1f3fbf", n: "Azul" },
+    { v: "#111111", n: "Negro" },
+    { v: "#c8281e", n: "Rojo" },
+  ];
+  const INK = { on: false, color: INK_COLORS[0].v, eraser: false, finger: false, undo: [], cur: null };
+  S.ink = S.ink || {};
+
+  function inkPath(pts) {
+    if (pts.length < 4) return `M${pts[0]} ${pts[1]}l0.01 0`;
+    let d = `M${pts[0]} ${pts[1]}`;
+    for (let i = 2; i < pts.length - 2; i += 2) {
+      const mx = (pts[i] + pts[i + 2]) / 2, my = (pts[i + 1] + pts[i + 3]) / 2;
+      d += `Q${pts[i]} ${pts[i + 1]} ${mx.toFixed(1)} ${my.toFixed(1)}`;
+    }
+    return d + `L${pts[pts.length - 2]} ${pts[pts.length - 1]}`;
+  }
+  function inkDraw(svg) {
+    const strokes = (S.ink || {})[svg.dataset.key] || [];
+    svg.innerHTML = strokes.map((st) => `<path d="${inkPath(st.p)}" stroke="${st.c}" stroke-width="${st.w}"/>`).join("");
+  }
+  function inkSize(svg) {
+    const w = svg.parentNode.offsetWidth, h = svg.parentNode.offsetHeight;
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  }
+  function fitPaper() {
+    const fit = $app.querySelector(".paper-fit");
+    const paper = fit && fit.querySelector(".paper.a4");
+    if (!paper) return;
+    paper.style.transform = "";
+    const scale = Math.min(1, fit.clientWidth / paper.offsetWidth);
+    paper.style.transform = scale < 1 ? `scale(${scale})` : "";
+    paper.style.marginLeft = scale < 1 ? "0" : "";
+    fit.style.height = scale < 1 ? `${paper.offsetHeight * scale + 32}px` : "";
+  }
+  addEventListener("resize", () => fitPaper());
+
+  function setupInk(scope, blank) {
+    S.ink = S.ink || {};
+    const paper = $app.querySelector(".paper");
+    if (!paper) return;
+    const prefix = `${scope}|${blank ? "b" : "a"}|`;
+    const has = Object.keys(S.ink).some((k) => k.startsWith(prefix) && S.ink[k].length);
+    document.body.classList.toggle("inking", INK.on);
+    document.body.classList.toggle("ink-finger", INK.on && INK.finger);
+    if (!INK.on && !has) return;
+    paper.classList.add("a4");
+    const fit = document.createElement("div");
+    fit.className = "paper-fit";
+    paper.before(fit);
+    fit.appendChild(paper);
+    paper.querySelectorAll("section.pg").forEach((sec, i) => {
+      const wrap = document.createElement("div");
+      wrap.className = "pg-ink";
+      while (sec.firstChild) wrap.appendChild(sec.firstChild);
+      sec.appendChild(wrap);
+      const svg = document.createElementNS(SVGNS, "svg");
+      svg.setAttribute("class", "ink");
+      svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
+      svg.dataset.key = prefix + i;
+      wrap.appendChild(svg);
+      inkSize(svg);
+      inkDraw(svg);
+      if (window.ResizeObserver) new ResizeObserver(() => inkSize(svg)).observe(wrap);
+    });
+    fitPaper();
+    if (window.ResizeObserver) new ResizeObserver(() => fitPaper()).observe(paper);
+  }
+
+  function inkPoint(svg, e) {
+    const r = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    const k = vb && vb.width ? vb.width / r.width : 1;
+    return [Math.round((e.clientX - r.left) * k * 10) / 10, Math.round((e.clientY - r.top) * k * 10) / 10];
+  }
+  function inkErase(svg, x, y) {
+    const key = svg.dataset.key;
+    const list = S.ink[key] || [];
+    const keep = list.filter((st) => {
+      for (let i = 0; i < st.p.length; i += 2) if (Math.hypot(st.p[i] - x, st.p[i + 1] - y) < 12) return false;
+      return true;
+    });
+    if (keep.length !== list.length) {
+      list.filter((st) => !keep.includes(st)).forEach((st) => INK.undo.push({ key, st, del: true }));
+      S.ink[key] = keep;
+      inkDraw(svg);
+      save();
+    }
+  }
+  $app.addEventListener("pointerdown", (e) => {
+    const svg = e.target.closest && e.target.closest("svg.ink");
+    if (!svg || !INK.on) return;
+    if (e.pointerType === "touch" && !INK.finger) return; // el dedo desplaza la página
+    e.preventDefault();
+    try {
+      svg.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    const [x, y] = inkPoint(svg, e);
+    if (INK.eraser) {
+      INK.cur = { svg, erase: true, id: e.pointerId };
+      return inkErase(svg, x, y);
+    }
+    const path = document.createElementNS(SVGNS, "path");
+    path.setAttribute("stroke", INK.color);
+    path.setAttribute("stroke-width", "2.2");
+    svg.appendChild(path);
+    INK.cur = { svg, path, id: e.pointerId, st: { c: INK.color, w: 2.2, p: [x, y] } };
+    path.setAttribute("d", inkPath(INK.cur.st.p));
+  });
+  $app.addEventListener("pointermove", (e) => {
+    const c = INK.cur;
+    if (!c || c.id !== e.pointerId) return;
+    e.preventDefault();
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of evs.length ? evs : [e]) {
+      const [x, y] = inkPoint(c.svg, ev);
+      if (c.erase) inkErase(c.svg, x, y);
+      else {
+        const p = c.st.p;
+        if (Math.hypot(x - p[p.length - 2], y - p[p.length - 1]) >= 0.8) p.push(x, y);
+      }
+    }
+    if (!c.erase) c.path.setAttribute("d", inkPath(c.st.p));
+  });
+  const inkEnd = (e) => {
+    const c = INK.cur;
+    if (!c || c.id !== e.pointerId) return;
+    INK.cur = null;
+    if (c.erase) return;
+    const key = c.svg.dataset.key;
+    (S.ink[key] = S.ink[key] || []).push(c.st);
+    INK.undo.push({ key, st: c.st });
+    save();
+  };
+  $app.addEventListener("pointerup", inkEnd);
+  $app.addEventListener("pointercancel", inkEnd);
+  // En el iPad, el Apple Pencil también desplaza la página: mientras dibujas, se bloquea.
+  const stylusBlock = (e) => {
+    if (!INK.on || !e.target.closest || !e.target.closest("svg.ink")) return;
+    if ([...e.touches].some((tt) => tt.touchType === "stylus") || INK.finger) e.preventDefault();
+  };
+  document.addEventListener("touchstart", stylusBlock, { passive: false });
+  document.addEventListener("touchmove", stylusBlock, { passive: false });
+
+  function inkAction(act, btn) {
+    if (act === "inkcolor") {
+      INK.color = btn.dataset.color;
+      INK.eraser = false;
+    } else if (act === "inkeraser") INK.eraser = !INK.eraser;
+    else if (act === "inkfinger") {
+      INK.finger = !INK.finger;
+      document.body.classList.toggle("ink-finger", INK.finger);
+    } else if (act === "inkundo") {
+      const last = INK.undo.pop();
+      if (!last) return toast(t("No hay nada que deshacer", "Niente da annullare"));
+      const list = (S.ink[last.key] = S.ink[last.key] || []);
+      if (last.del) list.push(last.st);
+      else list.splice(list.lastIndexOf(last.st), 1);
+      const svg = $app.querySelector(`svg.ink[data-key="${last.key}"]`);
+      if (svg) inkDraw(svg);
+      save();
+    }
+    const bar = $app.querySelector(".ink-tools");
+    if (bar) {
+      bar.querySelectorAll(".ink-color").forEach((b) => b.setAttribute("aria-pressed", String(!INK.eraser && INK.color === b.dataset.color)));
+      bar.querySelector('[data-act="inkeraser"]').setAttribute("aria-pressed", String(INK.eraser));
+      bar.querySelector('[data-act="inkfinger"]').setAttribute("aria-pressed", String(INK.finger));
+    }
   }
 
   /* ---------- Vistas ---------- */
@@ -782,7 +972,7 @@
     "toggle",
     (e) => {
       const d = e.target;
-      if (!d.classList || !d.classList.contains("level-panel")) return;
+      if (!d.classList || !(d.classList.contains("level-panel") || d.classList.contains("side-level"))) return;
       S.open = S.open || {};
       S.open[d.dataset.level] = d.open;
       save();
@@ -1021,11 +1211,16 @@
         <div class="cover"><p>Quaderno · Italiano ${esc(u.level)}</p><h1>Unità ${u.n}<br>${esc(u.title)}</h1><p lang="es">${esc(u.goal)}</p><p style="font-size:.875rem">${t("Nombre", "Nome")}: ______________________ &nbsp; ${t("Fecha", "Data")}: ____________</p></div>
         ${sections.join("")}
       </article>`;
+    setupInk(`u${u.n}`, blank);
   }
 
   /* ---------- Router ---------- */
   async function router() {
     TTS.stop();
+    if (!/\/print$/.test(location.hash)) {
+      INK.on = false;
+      document.body.classList.remove("inking", "ink-finger");
+    }
     stopMic();
     const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     if (parts[0] === "level") {
@@ -1052,9 +1247,71 @@
       else if (parts[2] === "print") viewPrint(u);
       else viewUnit(u);
     }
+    renderChrome(parts);
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", router);
+
+  /* ---------- Ordenador: barra lateral con el temario y ruta de navegación ---------- */
+  const $side = document.getElementById("side");
+  const $crumbs = document.getElementById("crumbs");
+  function renderChrome(parts) {
+    if (!$side || !$crumbs) return;
+    const unitN = parts[0] === "u" ? +parts[1] : null;
+    const u = unitN ? C.units.find((x) => x.n === unitN) : null;
+    const lvId = u ? u.level : parts[0] === "level" ? parts[1] : null;
+    const lv = lvId ? C.levels.find((l) => l.id === lvId) : null;
+    const U = unitN ? window.UNITS[unitN] : null;
+
+    // Ruta: Inicio › A1 · Sobrevivir › Unità 1 · Ciao! Piacere › Parole
+    const crumbs = [`<a href="#/">Inicio</a>`];
+    if (lv) crumbs.push(`<a href="#/" data-open-level="${lv.id}">${lv.id} · ${esc(lv.name)}</a>`);
+    if (u) crumbs.push(`<a href="#/u/${u.n}">Unità ${u.n} · ${esc(u.title)}</a>`);
+    if (parts[0] === "level") crumbs.push(`<a href="#/level/${lv.id}">Esame di livello ${lv.id}</a>`);
+    if (U && parts[2] === "p") {
+      const pg = U.pages[(+parts[3] || 1) - 1];
+      if (pg) crumbs.push(`<span>${esc(pg.title)}</span>`);
+    } else if (parts[2] === "exam") crumbs.push(`<span>Esame</span>`);
+    if (parts[2] === "print") crumbs.push(`<span>PDF</span>`);
+    // El último elemento no es un enlace: es donde estás.
+    const last = crumbs.length - 1;
+    crumbs[last] = crumbs[last].replace(/^<a [^>]*>(.*)<\/a>$/, '<span aria-current="page">$1</span>');
+    $crumbs.innerHTML = crumbs.join(`<span class="sep" aria-hidden="true">›</span>`);
+
+    // Barra lateral: niveles plegables, unidad actual con sus páginas.
+    S.open = S.open || {};
+    $side.innerHTML =
+      `<a class="side-brand" href="#/"><span class="side-logo">Q</span><span><b>Quaderno</b><span class="muted small">Italiano de cero a B2</span></span></a>` +
+      C.levels
+        .map((L) => {
+          const open = L.id === lvId || S.open[L.id];
+          const units = C.units
+            .filter((x) => x.level === L.id)
+            .map((x) => {
+              const cur = x.n === unitN;
+              const sub =
+                cur && U
+                  ? `<div class="side-pages">${U.pages
+                      .map((pg, i) => `<a href="#/u/${x.n}/p/${i + 1}" ${parts[2] === "p" && +parts[3] === i + 1 ? 'aria-current="page"' : ""}>${S.done[`u${x.n}.p${i + 1}`] ? "✓ " : ""}${esc(pg.title)}</a>`)
+                      .join("")}<a href="#/u/${x.n}/exam" ${parts[2] === "exam" ? 'aria-current="page"' : ""}>Esame</a></div>`
+                  : "";
+              return `<a class="side-unit ${cur ? "is-current" : ""} ${x.ready ? "" : "locked"}" href="#/u/${x.n}"><span class="num">${pad(x.n)}</span><span class="t">${esc(x.title)}</span>${examPassed(x.n) ? `<span class="ok" aria-label="Superada">✓</span>` : ""}</a>${sub}`;
+            })
+            .join("");
+          const ex = L.exam && L.exam.ready ? `<a class="side-unit side-exam ${parts[0] === "level" && parts[1] === L.id ? "is-current" : ""}" href="#/level/${L.id}"><span class="num">${L.id}</span><span class="t">Esame di livello</span></a>` : "";
+          return `<details class="side-level" data-level="${L.id}" ${open ? "open" : ""}><summary><span class="side-id">${L.id}</span>${esc(L.name)}</summary>${units}${ex}</details>`;
+        })
+        .join("");
+    const cur = $side.querySelector(".is-current");
+    if (cur && matchMedia("(min-width: 1024px)").matches) cur.scrollIntoView({ block: "nearest" });
+  }
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-open-level]");
+    if (!a) return;
+    S.open = { [a.dataset.openLevel]: true };
+    save();
+    if (location.hash === "#/" || location.hash === "") viewHome();
+  });
 
   /* ---------- Eventos ---------- */
   $app.addEventListener("input", (e) => {
@@ -1132,6 +1389,27 @@
       if (L) viewLevelPrint(L);
       else viewPrint(u);
       window.scrollTo(0, y);
+    }
+    else if (act === "ink" && u) {
+      INK.on = !INK.on;
+      INK.undo = [];
+      const y = window.scrollY;
+      if (L) viewLevelPrint(L);
+      else viewPrint(u);
+      window.scrollTo(0, y);
+      if (INK.on) toast(t("Lápiz activado", "Matita attiva"));
+    } else if (act.startsWith("ink") && act !== "ink") {
+      if (act === "inkclear") {
+        const blank = BLANK || !!S.printBlank;
+        const scope = L ? `lv${L.id}` : `u${u.n}`;
+        const prefix = `${scope}|${blank ? "b" : "a"}|`;
+        if (!confirm(t("¿Borrar todos los trazos de esta hoja?", "Cancellare tutti i tratti di questo foglio?"))) return;
+        S.ink = S.ink || {};
+        Object.keys(S.ink).filter((k) => k.startsWith(prefix)).forEach((k) => delete S.ink[k]);
+        INK.undo = [];
+        save();
+        $app.querySelectorAll("svg.ink").forEach(inkDraw);
+      } else inkAction(act, btn);
     }
     else if (act === "backup") backupProgress();
     else if (act === "restore") document.getElementById("restore-file").click();
