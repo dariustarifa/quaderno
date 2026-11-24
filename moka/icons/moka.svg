@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 30 370 400" fill="none" stroke="#141414" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+  <g class="m-arm m-arm-l"><path d="M156 296 Q128 300 110 321"/><circle cx="109" cy="322" r="7" fill="#141414" stroke="none"/></g>
+  <g class="m-arm m-arm-r"><path d="M296 296 Q324 300 340 321"/><circle cx="341" cy="322" r="7" fill="#141414" stroke="none"/></g>
+  <g class="m-leg m-leg-l"><path d="M182 386 V411 H166"/></g>
+  <g class="m-leg m-leg-r"><path d="M264 386 V411 H280"/></g>
+  <path class="m-handle" d="M318 160 Q340 152 354 168 Q366 190 348 232 Q332 266 300 280 Z" fill="#b9bbbd"/>
+  <path d="M322 178 Q336 186 330 214 Q324 240 306 262" stroke-width="12"/>
+  <path class="m-top" d="M104 146 H326 L300 293 H152 L112 194 Q102 172 78 160 Q76 150 104 146 Z" fill="#b9bbbd"/>
+  <g class="m-lidg">
+    <path d="M214 104 Q196 82 198 64 Q202 47 216 47 Q232 48 236 64 Q236 82 222 104 Z" fill="#b9bbbd"/>
+    <path d="M120 134 Q140 108 218 106 Q300 108 330 132 Z" fill="#b9bbbd"/>
+    <path d="M116 138 H334" />
+  </g>
+  <clipPath id="m-tankclip"><path d="M152 296 H298 L326 372 Q330 386 316 386 H134 Q120 386 124 372 Z"/></clipPath>
+  <path class="m-tankbg" d="M152 296 H298 L326 372 Q330 386 316 386 H134 Q120 386 124 372 Z" fill="#b9bbbd" stroke="none"/>
+  <rect class="m-fill" x="118" y="290" width="0" height="100" fill="#e8742a" stroke="none" clip-path="url(#m-tankclip)"/>
+  <path d="M178 300 L168 382 M272 300 L282 382" stroke-width="8"/>
+  <path d="M152 296 H298 L326 372 Q330 386 316 386 H134 Q120 386 124 372 Z"/>
+  <g class="m-eyes" fill="#141414" stroke="none"><circle cx="188" cy="215" r="7.5"/><circle cx="262" cy="215" r="7.5"/></g>
+  <path class="m-mouth" d="M209 238 Q225 252 241 238" stroke-width="7"/>
+</svg>

@@ -1,0 +1,492 @@
+/* ==========================================================================
+   Moka · capa de diseño sobre la base del Quaderno.
+   Negro profundo, tinta crema, Archivo estrecha en titulares, formas redondeadas
+   y un color por nivel (A1 verde, A2 caramelo, B1 rojo, B2 acero).
+   ========================================================================== */
+:root {
+  --bg-0: #050506;
+  --bg-1: #0b0b0c;
+  --bg-2: #141416;
+  --ink: #f3eee4;
+  --ink-2: rgba(243, 238, 228, 0.72);
+  --ink-3: rgba(243, 238, 228, 0.54);
+  --line: rgba(243, 238, 228, 0.1);
+  --line-2: rgba(243, 238, 228, 0.16);
+  --tile-top: #141416;
+  --tile-bot: #141416;
+  --hl: inset 0 0 0 0 transparent;
+  --r-lg: 32px;
+  --r-md: 24px;
+  --r-sm: 14px;
+  --accent: #c8261e;
+  --orange: #e8742a;
+  --a1: #1f7a45;
+  --a2: #d9a441;
+  --b1: #c8261e;
+  --b2: #9aa0a3;
+  --font: "Archivo", ui-sans-serif, system-ui, sans-serif;
+}
+html,
+body {
+  background: var(--bg-0);
+}
+body {
+  font-feature-settings: normal;
+}
+.backdrop,
+.backdrop::after {
+  background: var(--bg-0) !important;
+  opacity: 1;
+}
+::selection {
+  background: var(--ink);
+  color: #050506;
+}
+
+/* Titulares cartel */
+.display,
+.topbar h1,
+.mk-hero h1,
+.mk-unit-title,
+.section-title {
+  font-family: var(--font);
+  font-stretch: 62%;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+}
+.display {
+  font-size: clamp(2.6rem, 11vw, 4.2rem);
+  line-height: 0.86;
+}
+.topbar h1 {
+  font-size: 1.35rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.topbar {
+  background: var(--bg-0) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 0 var(--line);
+}
+.section-title {
+  font-size: 2rem;
+  line-height: 0.9;
+}
+.section-title span {
+  font-family: var(--font);
+  font-stretch: 100%;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.small,
+.muted {
+  letter-spacing: 0.01em;
+}
+
+/* Botones redondeados */
+.btn-primary {
+  background: var(--accent) !important;
+  color: var(--ink) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+.btn-quiet,
+.tool,
+.icon-btn {
+  border-radius: 999px !important;
+  background: var(--bg-2) !important;
+  box-shadow: inset 0 0 0 1px var(--line-2) !important;
+}
+.btn-quiet[aria-pressed="true"] {
+  background: var(--a1) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+/* Superficies planas */
+.tile,
+.block,
+.level-panel,
+.settings,
+.media,
+.player {
+  background: var(--bg-2) !important;
+  box-shadow: inset 0 0 0 1px var(--line) !important;
+}
+.block {
+  border-radius: var(--r-md);
+}
+.in,
+.ta {
+  border-radius: 14px;
+  background: #0b0b0c;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.in:focus,
+.ta:focus {
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.progress a[data-done],
+.progress span[data-done] {
+  background: var(--a1) !important;
+}
+.progress a[data-current] {
+  background: var(--ink) !important;
+}
+
+/* ---------- Portada ---------- */
+.mk-hero {
+  padding: 18px 4px 4px;
+}
+.mk-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  font-stretch: 125%;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.mk-meta span + span {
+  color: var(--ink-3);
+}
+.mk-title {
+  position: relative;
+  display: inline-block;
+  margin-top: 64px;
+}
+.mk-title h1 {
+  font-size: clamp(8.5rem, 38vw, 15rem);
+  line-height: 0.8;
+  letter-spacing: -0.045em;
+}
+/* Moka se apoya en la «A»: el ancla es fija y sus gestos ocurren dentro de este hueco */
+.mk-perch {
+  position: absolute;
+  right: 0.02em;
+  bottom: calc(100% - 0.215em);
+  font-size: clamp(8.5rem, 38vw, 15rem);
+  width: 0.5em;
+  pointer-events: none;
+}
+.mk-perch .moka {
+  width: 100%;
+  height: auto;
+}
+.mk-lede {
+  margin-top: 16px;
+  max-width: 34ch;
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--ink-2);
+}
+
+/* Niveles como tarjetas de color */
+.levels {
+  gap: 8px !important;
+}
+.level-panel {
+  border-radius: var(--r-md) !important;
+}
+.level-panel summary {
+  min-height: 92px;
+  align-items: flex-end;
+  padding: 14px 18px;
+}
+.level-panel[data-level="A1"] summary { background: var(--a1); color: var(--ink); }
+.level-panel[data-level="A2"] summary { background: var(--a2); color: #1c1d1b; }
+.level-panel[data-level="B1"] summary { background: var(--b1); color: var(--ink); }
+.level-panel[data-level="B2"] summary { background: var(--b2); color: #1c1d1b; }
+.level-panel summary .muted,
+.level-panel summary .chev {
+  color: inherit !important;
+  opacity: 0.8;
+}
+.level-id {
+  order: 0;
+  width: auto;
+  height: auto;
+  background: none !important;
+  box-shadow: none !important;
+  font-size: 4rem;
+  line-height: 0.82;
+  font-weight: 900;
+  font-stretch: 62%;
+  letter-spacing: -0.03em;
+}
+.level-name {
+  font-size: 11px;
+  font-weight: 700;
+  font-stretch: 125%;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.level-bar {
+  background: rgba(0, 0, 0, 0.18);
+}
+.level-bar span {
+  background: currentColor;
+}
+.level-body {
+  border-top: 0;
+  padding-top: 6px;
+}
+.unit-row .n {
+  font-family: var(--font);
+  font-stretch: 62%;
+  font-weight: 900;
+  font-size: 1.6rem;
+}
+.unit-row .check {
+  color: #4fb07a;
+}
+
+/* ---------- Unidad ---------- */
+.mk-unit {
+  --lv: var(--a1);
+  --lv-ink: var(--ink);
+  margin: 0 calc(var(--s4) * -1);
+  padding: calc(env(safe-area-inset-top) + 18px) 18px 22px;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background: var(--lv);
+  color: var(--lv-ink);
+}
+.mk-unit[data-level="A2"] { --lv: var(--a2); --lv-ink: #1c1d1b; }
+.mk-unit[data-level="B1"] { --lv: var(--b1); }
+.mk-unit[data-level="B2"] { --lv: var(--b2); --lv-ink: #1c1d1b; }
+.mk-unit-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.mk-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 999px;
+  background: rgba(28, 29, 27, 0.22);
+  color: inherit;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mk-back svg {
+  width: 16px;
+  height: 16px;
+}
+.mk-meta-n {
+  font-size: 12px;
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.mk-unit-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+}
+.mk-unit-title {
+  font-size: clamp(3.4rem, 17vw, 7.5rem);
+  line-height: 0.82;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+/* Hueco reservado: nunca tapa el título ni los botones */
+.mk-unit-moka {
+  flex: none;
+  width: clamp(72px, 20vw, 130px);
+}
+.mk-unit-moka .moka,
+.mk-mini .moka {
+  width: 100%;
+  height: auto;
+}
+.mk-unit-goal {
+  margin-top: 14px;
+  max-width: 40ch;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+.mk-unit + .bento {
+  margin-top: var(--s4);
+}
+.mk-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mk-mini {
+  flex: none;
+  width: 52px;
+}
+
+/* ---------- Moka: estados ---------- */
+@property --p {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+.moka {
+  display: block;
+  overflow: visible;
+}
+.moka * {
+  transform-box: fill-box;
+}
+.moka .m-fill {
+  transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+}
+/* Reposo: quieta; cada 9 s mira a un lado y al otro (unos 6 s de quietud entre gestos) */
+.moka .m-eyes {
+  animation: moka-look 9s ease-in-out 2s infinite;
+}
+.moka.is-run .m-eyes,
+.moka.is-party .m-eyes {
+  animation: none;
+}
+/* Transición: corre en el sitio, sin desplazarse */
+.moka.is-run .m-body { animation: moka-hop 0.32s ease-in-out 5; }
+.moka.is-run .m-leg-l { animation: moka-step 0.32s ease-in-out 5; }
+.moka.is-run .m-leg-r { animation: moka-step 0.32s ease-in-out -0.16s 5; }
+.moka.is-run .m-arm-l { transform-origin: right top; animation: moka-swing 0.32s ease-in-out 5; }
+.moka.is-run .m-arm-r { transform-origin: left top; animation: moka-swing 0.32s ease-in-out -0.16s 5; }
+/* Celebración: crece un poco, se sacude, brazos arriba y tapa entreabierta; una sola vez */
+.moka.is-party { transform-origin: 50% 100%; animation: moka-party 1.6s cubic-bezier(0.34, 1.3, 0.5, 1) both; }
+.moka.is-party .m-arm-l { transform-origin: right top; animation: moka-armL 1.6s ease both; }
+.moka.is-party .m-arm-r { transform-origin: left top; animation: moka-armR 1.6s ease both; }
+.moka.is-party .m-lid { transform-origin: right bottom; animation: moka-lid 1.6s ease both; }
+@keyframes moka-look {
+  0%, 70%, 89%, 100% { transform: translateX(0); }
+  73%, 78% { transform: translateX(-5px); }
+  81%, 86% { transform: translateX(5px); }
+}
+@keyframes moka-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes moka-step { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-13px); } }
+@keyframes moka-swing { 0%, 100% { transform: rotate(16deg); } 50% { transform: rotate(-16deg); } }
+@keyframes moka-party {
+  0%, 100% { transform: scale(1) rotate(0); }
+  18% { transform: scale(1.1) rotate(-3deg); }
+  30% { transform: scale(1.1) rotate(3deg); }
+  42% { transform: scale(1.1) rotate(-2deg); }
+  54%, 80% { transform: scale(1.1) rotate(0); }
+}
+@keyframes moka-armL { 0%, 100% { transform: rotate(0); } 20%, 80% { transform: rotate(62deg); } }
+@keyframes moka-armR { 0%, 100% { transform: rotate(0); } 20%, 80% { transform: rotate(-62deg); } }
+@keyframes moka-lid { 0%, 100% { transform: rotate(0); } 20%, 80% { transform: rotate(-16deg) translateY(-4px); } }
+
+/* ---------- Pantalla de carga ---------- */
+.mk-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--bg-0);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.mk-loader.is-on {
+  opacity: 1;
+}
+.mk-loader[hidden] {
+  display: none;
+}
+.mk-loader-moka {
+  width: 150px;
+}
+.mk-loader-moka .moka {
+  width: 100%;
+  height: auto;
+}
+.mk-loader-pct {
+  font-size: 2.2rem;
+  line-height: 1;
+  font-weight: 900;
+  font-stretch: 75%;
+  color: var(--orange);
+  font-variant-numeric: tabular-nums;
+}
+.mk-loader-msg {
+  font-weight: 700;
+}
+
+/* ---------- Ordenador ---------- */
+@media screen and (min-width: 1024px) {
+  .side {
+    background: var(--bg-1) !important;
+    box-shadow: 1px 0 0 var(--line) !important;
+  }
+  .mk-brand {
+    font-size: 3rem;
+    line-height: 0.85;
+    font-weight: 900;
+    font-stretch: 62%;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+  .side-brand {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+  .side-level summary .side-id {
+    border-radius: 10px;
+  }
+  .side-level[data-level="A1"] .side-id { background: var(--a1); color: var(--ink); }
+  .side-level[data-level="A2"] .side-id { background: var(--a2); color: #1c1d1b; }
+  .side-level[data-level="B1"] .side-id { background: var(--b1); color: var(--ink); }
+  .side-level[data-level="B2"] .side-id { background: var(--b2); color: #1c1d1b; }
+  .mk-unit {
+    margin: var(--s4) 0 0;
+    border-radius: var(--r-lg);
+    padding: 26px 30px 28px;
+  }
+  .mk-unit .mk-back {
+    display: none;
+  }
+  .mk-hero {
+    padding-top: 8px;
+  }
+  .mk-title {
+    margin-top: 110px;
+  }
+  .mk-mini {
+    width: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moka,
+  .moka * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media print {
+  .mk-loader,
+  .mk-mini,
+  .mk-perch {
+    display: none !important;
+  }
+}
