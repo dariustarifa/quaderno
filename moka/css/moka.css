@@ -1021,3 +1021,31 @@ html[data-level="B2"] { --lv: var(--b2); --lv-ink: #1c1d1b; --lv-soft: #c2c7c9; 
 }
 #temario, #ajustes { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 24px); }
 .mk-tabs .mk-dock-btn { flex: 1 1 0; text-align: center; padding: 0; }
+
+/* Halo detrás de la Moka pequeña de páginas y exámenes (como en la carga) */
+.mk-mini {
+  position: relative;
+  isolation: isolate;
+}
+.mk-mini::before,
+.mk-mini::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.mk-mini::before {
+  left: -45%;
+  right: -45%;
+  top: -14%;
+  bottom: -26%;
+  background: radial-gradient(closest-side, rgba(243, 238, 228, 0.24), rgba(243, 238, 228, 0.1) 60%, rgba(243, 238, 228, 0) 100%);
+}
+.mk-mini::after {
+  left: 0;
+  right: 0;
+  bottom: -10%;
+  height: 24%;
+  background: radial-gradient(closest-side, rgba(243, 238, 228, 0.5), rgba(243, 238, 228, 0.16) 60%, rgba(243, 238, 228, 0) 100%);
+}
