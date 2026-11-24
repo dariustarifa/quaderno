@@ -190,6 +190,7 @@
     },
     stop() {
       if (this.ok) speechSynthesis.cancel();
+      if (REC.el) REC.el.pause();
       this.run = (this.run || 0) + 1;
       document.querySelectorAll('[data-playing="true"]').forEach((b) => (b.dataset.playing = "false"));
     },
@@ -203,12 +204,52 @@
     };
   }
 
+  // Audios grabados con edge-tts: ../audio/<huella>.mp3, donde la huella sale del texto del diálogo.
+  // Si el diálogo se edita, la huella cambia y se vuelve a la voz del dispositivo hasta regenerarlo.
+  const REC = {
+    el: null,
+    key(lines) {
+      const str = lines.map((l) => `${l.who || ""}|${l.text}`).join("\n");
+      let h = 0x811c9dc5;
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 0x01000193) >>> 0;
+      }
+      return h.toString(16).padStart(8, "0");
+    },
+    has(lines) {
+      return !!(window.AUDIO && window.AUDIO.has(this.key(lines)));
+    },
+    play(lines, rate) {
+      if (!this.has(lines)) return Promise.resolve(false);
+      if (!this.el) this.el = new Audio();
+      const a = this.el;
+      a.src = `../audio/${this.key(lines)}.mp3`;
+      a.defaultPlaybackRate = a.playbackRate = Math.min(1, (rate || 0.95) / 0.95); // «Lento» ≈ 0,8 sin cambiar el tono
+      a.preservesPitch = true;
+      return new Promise((resolve) => {
+        const done = (ok) => {
+          a.onended = a.onerror = a.onpause = null;
+          resolve(ok);
+        };
+        a.onended = a.onpause = () => done(true);
+        a.onerror = () => done(false); // sin conexión y sin caché: voz del dispositivo
+        a.play().catch(() => done(false));
+      });
+    },
+  };
+
   async function playButton(btn, lines, rate) {
     const playing = btn.dataset.playing === "true";
     TTS.stop();
     if (playing) return;
     const run = TTS.run;
     btn.dataset.playing = "true";
+    // Diálogo con audio grabado (voces neuronales): se usa en lugar de la voz del dispositivo.
+    if (lines.length > 1 && (await REC.play(lines, rate))) {
+      if (run === TTS.run) btn.dataset.playing = "false";
+      return;
+    }
     const roles = TTS.cast(lines);
     for (const l of lines) {
       if (run !== TTS.run) break;
