@@ -1192,6 +1192,19 @@
     });
   }
 
+  // Color de la barra de estado (iPhone): el de la cabecera de unidad mientras se ve; si no, el negro del fondo.
+  // Sin black-translucent, iOS pinta la barra sólida con theme-color y el fondo de la página: queda unida, sin velo.
+  const $theme = document.querySelector('meta[name="theme-color"]');
+  let topRaf = 0;
+  function paintTop() {
+    topRaf = 0;
+    const head = document.querySelector(".mk-unit");
+    const c = head && head.getBoundingClientRect().bottom > 8 ? getComputedStyle(head).backgroundColor : "#050506";
+    if ($theme && $theme.content !== c) $theme.content = c;
+    document.documentElement.style.backgroundColor = c;
+  }
+  addEventListener("scroll", () => topRaf || (topRaf = requestAnimationFrame(paintTop)), { passive: true });
+
   // Portada en móvil: Temario y Ajustes llevan a su sección; la activa se marca según el scroll.
   function syncTabs() {
     const tabs = document.querySelector(".mk-tabs");
@@ -1685,6 +1698,7 @@
     window.scrollTo(0, 0);
     markFields($app);
     syncTabs();
+    paintTop();
     Moka.arrive(parts);
   }
   window.addEventListener("hashchange", router);

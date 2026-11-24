@@ -972,18 +972,6 @@ html[data-level="B2"] { --lv: var(--b2); --lv-ink: #1c1d1b; --lv-soft: #c2c7c9; 
 .side-level.is-closing summary::after { transform: none; }
 .level-panel .chev { transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1); }
 
-/* Sin desenfoque ni contenido borroso bajo la barra de estado: franja opaca del color del fondo */
-html::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: env(safe-area-inset-top, 0px);
-  z-index: 95;
-  background: var(--bg-0);
-  pointer-events: none;
-}
 * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -993,14 +981,8 @@ html::before {
 /* ==========================================================================
    v4 · Zona de iOS bajo la barra de estado, colores en ejercicios, barra Temario/Ajustes
    ========================================================================== */
-/* iOS 26 oscurece y desenfoca por su cuenta la franja bajo la hora (efecto de borde de Liquid Glass);
-   la web no puede quitarlo, así que la primera fila de botones baja por debajo de esa franja. */
-@media screen and (max-width: 1023px) {
-  .mk-hero { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
-  .mk-unit { padding-top: calc(env(safe-area-inset-top, 0px) + 58px) !important; }
-  .mk-ph { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
-}
-
+/* Barra de estado sólida (sin black-translucent): iOS la pinta con el color de la página, que la app
+   ajusta al de la cabecera visible. Así no hay velo ni desenfoque bajo la hora. */
 /* Ejercicios: número de apartado y casillas en rojo (por rellenar) o verde (rellenas) */
 :root { --ok: #4fb07a; --todo: #ec6a60; }
 .mk-bn {
