@@ -7,6 +7,21 @@
   const $toast = document.getElementById("toast");
   const STORE_KEY = "quaderno.it.v1";
 
+  /* ---------- Sin zoom: Safari ignora user-scalable=no, así que se bloquea el pellizco a mano ---------- */
+  ["gesturestart", "gesturechange", "gestureend"].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
+  document.addEventListener("touchmove", (e) => e.touches.length > 1 && e.preventDefault(), { passive: false });
+  let lastTouch = 0;
+  document.addEventListener(
+    "touchend",
+    (e) => {
+      // Doble toque rápido fuera de los campos = zoom en iOS antiguos: se anula.
+      const now = Date.now();
+      if (now - lastTouch < 300 && !e.target.closest("input, textarea, select")) e.preventDefault();
+      lastTouch = now;
+    },
+    { passive: false },
+  );
+
   /* ---------- Estado guardado ---------- */
   let S = {};
   try {
@@ -642,11 +657,12 @@
       <div class="row-actions"><a class="btn-primary" href="${step.href}">${d ? "Continuar" : "Empezar"} · ${step.label} ${I.right}</a><a class="btn-quiet" href="#/u/${started.n}">Ver unidad</a></div>
     </div>`;
 
-    let i = 1;
+    S.open = S.open || {};
     const levels = C.levels
       .map((lv) => {
-        const tiles = C.units
-          .filter((u) => u.level === lv.id)
+        const lvUnits = C.units.filter((u) => u.level === lv.id);
+        const passedN = lvUnits.filter((u) => examPassed(u.n)).length;
+        const rows = lvUnits
           .map((u) => {
             const passed = examPassed(u.n);
             const dc = u.ready ? doneCount(u.n) : 0;
@@ -654,28 +670,35 @@
               ? `<span class="small muted">Pronto</span>`
               : passed
                 ? `<span class="check" aria-label="Superada">${I.check}</span>`
-                : `<span class="small muted num">${dc}/10</span>`;
-            return `<a class="tile ${u.ready ? "" : "locked"}" href="#/u/${u.n}" style="--i:${Math.min(i++, 14)}" ${u.ready ? "" : 'aria-disabled="true" tabindex="-1"'}>
-              <div class="tile-top"><span class="n">${pad(u.n)}</span>${state}</div>
-              <span class="tile-name">${esc(u.title)}</span><span class="goal">${esc(u.goal)}</span></a>`;
+                : `<span class="small muted num">${dc ? `${dc}/10` : ""}</span>`;
+            return `<a class="unit-row ${u.ready ? "" : "locked"}" href="#/u/${u.n}" ${u.ready ? "" : 'aria-disabled="true" tabindex="-1"'}>
+              <span class="n num">${pad(u.n)}</span><span class="unit-row-text"><span class="unit-row-name">${esc(u.title)}</span><span class="goal">${esc(u.goal)}</span></span>${state}</a>`;
           })
           .join("");
-        const lvUnits = C.units.filter((u) => u.level === lv.id);
         const ex = lv.exam || {};
         const lvScore = (S.levelExam || {})[lv.id];
         const lvState = lvScore
           ? `<span class="badge" ${lvScore.score >= 70 ? 'data-state="watch"' : 'data-state="warn"'}>${lvScore.score}/100</span>`
-          : `<span class="small muted">${ex.ready ? "Cuando acabes las unidades" : "Al terminar el nivel"}</span>`;
-        const examTile = `<${ex.ready ? `a href="#/level/${lv.id}"` : 'div aria-disabled="true"'} class="tile tile-wide ${ex.ready ? "" : "locked"}" style="--i:${Math.min(i++, 14)}">
-          <div class="tile-top"><span class="n">${lv.id}</span>${lvState}</div>
-          <span class="tile-name">Esame di livello ${lv.id}</span><span class="goal">${ex.minutes || 60} minutos · todo el nivel, centrado en lo más difícil</span></${ex.ready ? "a" : "div"}>`;
-        return `<h2 class="section-title">${lv.id} · ${esc(lv.name)}<span>${lvUnits.filter((u) => u.ready).length} de ${lvUnits.length} listas · ${lv.months} meses</span></h2><div class="bento enter">${tiles}${examTile}</div>`;
+          : "";
+        const examRow = `<${ex.ready ? `a href="#/level/${lv.id}"` : 'div aria-disabled="true"'} class="unit-row exam-row ${ex.ready ? "" : "locked"}">
+          <span class="n">${lv.id}</span><span class="unit-row-text"><span class="unit-row-name">Esame di livello ${lv.id}</span><span class="goal">${ex.minutes || 60} minutos · todo el nivel</span></span>${lvState}</${ex.ready ? "a" : "div"}>`;
+        const pct = Math.round((passedN / lvUnits.length) * 100);
+        return `<details class="level-panel" data-level="${lv.id}" ${S.open[lv.id] ? "open" : ""}>
+          <summary>
+            <span class="level-id">${lv.id}</span>
+            <span class="level-text"><span class="level-name">${esc(lv.name)}</span><span class="small muted num">${lvUnits.length} unidades · ${passedN} superadas</span>
+            <span class="level-bar" aria-hidden="true"><span style="width:${pct}%"></span></span></span>
+            <span class="chev" aria-hidden="true">${I.right}</span>
+          </summary>
+          <div class="level-body">${rows}${examRow}</div>
+        </details>`;
       })
       .join("");
 
     $app.innerHTML = `${topbar("Quaderno", "Italiano de cero a B2 · 2 unidades por semana")}
       <div class="bento enter" style="margin-top:8px">${lead}</div>
-      ${levels}
+      <h2 class="section-title">Temario<span>Toca un nivel para ver sus unidades</span></h2>
+      <div class="levels enter">${levels}</div>
       <section class="settings">
         <h2 class="title">Cómo se usa</h2>
         <p class="muted">Cada unidad tiene 10 páginas y un examen, unas 2 horas en total. Ritmo recomendado: 2 unidades por semana. Cada tema empieza con una explicación corta; lo demás, búscalo (diccionario, WordReference, IA). Al final de cada nivel hay un examen de nivel. Responde hablando con el micro siempre que puedas. Al terminar una página, pulsa <b class="white">Copiar para corregir</b> y pégalo en ChatGPT o Claude.</p>
@@ -746,6 +769,19 @@
     if (e.target.id === "restore-file" && e.target.files[0]) restoreProgress(e.target.files[0]);
   });
 
+  // Recuerda qué niveles dejaste abiertos.
+  document.addEventListener(
+    "toggle",
+    (e) => {
+      const d = e.target;
+      if (!d.classList || !d.classList.contains("level-panel")) return;
+      S.open = S.open || {};
+      S.open[d.dataset.level] = d.open;
+      save();
+    },
+    true,
+  );
+
   // App instalable y sin conexión (solo funciona servido por http/https, no abriendo el archivo).
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
@@ -783,15 +819,14 @@
     const pages = u.pages
       .map((p, i) => {
         const done = S.done[`u${u.n}.p${i + 1}`];
-        return `<a class="tile" href="#/u/${u.n}/p/${i + 1}" style="--i:${i + 1}">
-          <div class="tile-top"><span class="n">${pad(i + 1)}</span>${done ? `<span class="check" aria-label="${t("Hecha", "Fatta")}">${I.check}</span>` : `<span class="ring" aria-hidden="true"></span>`}</div>
-          <span class="tile-name">${esc(p.title)}</span><span class="goal">${skillLabel(p.skill)}</span></a>`;
+        return `<a class="unit-row" href="#/u/${u.n}/p/${i + 1}">
+          <span class="n num">${pad(i + 1)}</span><span class="unit-row-text"><span class="unit-row-name">${esc(p.title)}</span><span class="goal">${skillLabel(p.skill)}</span></span>${done ? `<span class="check" aria-label="${t("Hecha", "Fatta")}">${I.check}</span>` : `<span class="ring" aria-hidden="true"></span>`}</a>`;
       })
       .join("");
-    const examTile = `<a class="tile tile-wide" href="#/u/${u.n}/exam" style="--i:${u.pages.length + 1}">
-      <div class="tile-top"><span class="tile-name lg">Esame</span>${
-        ex ? `<span class="badge" ${ex.score >= 70 ? 'data-state="watch"' : 'data-state="warn"'}>${ex.score >= 70 ? t("Aprobado", "Superato") : t("Repetir", "Da ripetere")} · ${ex.score}</span>` : `<span class="ring" aria-hidden="true"></span>`
-      }</div><span class="goal">${t("Sin buscar nada. Aprobado con 70 sobre 100.", "Senza cercare niente. Superato con 70 su 100.")}</span></a>`;
+    const examTile = `<a class="unit-row exam-row" href="#/u/${u.n}/exam">
+      <span class="n">${t("Ex", "Es")}</span><span class="unit-row-text"><span class="unit-row-name">Esame</span><span class="goal">${t("Sin buscar nada. Aprobado con 70 sobre 100.", "Senza cercare niente. Superato con 70 su 100.")}</span></span>${
+        ex ? `<span class="badge" ${ex.score >= 70 ? 'data-state="watch"' : 'data-state="warn"'}>${ex.score}</span>` : `<span class="ring" aria-hidden="true"></span>`
+      }</a>`;
 
     $app.innerHTML = `${topbar(`Unità ${u.n}`, `${u.level} · ${C.levels.find((l) => l.id === u.level)?.name || ""}`, "#/")}
       <div class="hero"><h2 class="display">${esc(u.title)}</h2><p>${esc(u.goal)}</p></div>
@@ -801,8 +836,8 @@
           <div class="progress" aria-hidden="true">${u.pages.map((_, i) => `<span ${S.done[`u${u.n}.p${i + 1}`] ? "data-done" : ""}></span>`).join("")}<span ${examPassed(u.n) ? "data-done" : ""}></span></div>
           <div class="row-actions"><a class="btn-primary" href="${step.href}">${d ? t("Continuar", "Continua") : t("Empezar", "Comincia")} · ${step.label} ${I.right}</a><a class="btn-quiet" href="#/u/${u.n}/print">${I.print}${t("Exportar PDF", "Esporta PDF")}</a></div>
         </div>
-        ${pages}${examTile}
-      </div>`;
+      </div>
+      <div class="unit-list enter">${pages}${examTile}</div>`;
   }
 
   function progressBar(u, current) {
