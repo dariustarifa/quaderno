@@ -620,8 +620,7 @@
       )
       .join("");
     printingBlank = false;
-    const modes = `<div class="seg" role="group" aria-label="Qué imprimir"><button type="button" data-act="printmode" data-mode="answers" aria-pressed="${!blank}">${t("Con mis respuestas", "Con le mie risposte")}</button><button type="button" data-act="printmode" data-mode="blank" aria-pressed="${blank}">${t("En blanco", "In bianco")}</button></div>`;
-    $app.innerHTML = `<div class="print-bar"><a class="btn-quiet" href="#/level/${L.id}">${I.left}${t("Volver", "Indietro")}</a>${modes}<button class="btn-primary" style="width:auto;padding:12px 20px;display:inline-flex;gap:8px;align-items:center" data-act="print">${I.print}${t("Guardar como PDF", "Salva come PDF")}</button></div>
+    $app.innerHTML = `${printBar(`#/level/${L.id}`, blank)}
       <article class="paper" lang="it">
         <div class="cover"><p>Quaderno · Italiano ${esc(L.id)}</p><h1>${esc(L.title)}</h1><p>${esc(L.hint)}</p><p style="font-size:.875rem">Nome: ______________________ &nbsp; Data: ____________ &nbsp; Voto: ______ / 100</p></div>
         ${sections.join("")}
@@ -635,6 +634,15 @@
   function nextStep(n, total = 10) {
     for (let i = 1; i <= total; i++) if (!S.done[`u${n}.p${i}`]) return { href: `#/u/${n}/p/${i}`, label: `${t("Página", "Pagina")} ${i}` };
     return { href: `#/u/${n}/exam`, label: t("Examen", "Esame") };
+  }
+
+  /* Barra de la vista PDF: volver, qué imprimir y guardar. Compacta para el móvil. */
+  function printBar(back, blank) {
+    return `<div class="print-bar">
+      <a class="icon-btn" href="${back}" aria-label="${t("Volver", "Indietro")}">${I.left}</a>
+      <div class="seg" role="group" aria-label="${t("Qué imprimir", "Che cosa stampare")}"><button type="button" data-act="printmode" data-mode="answers" aria-pressed="${!blank}">${t("Respuestas", "Con risposte")}</button><button type="button" data-act="printmode" data-mode="blank" aria-pressed="${blank}">${t("En blanco", "In bianco")}</button></div>
+      <button class="btn-primary print-btn" data-act="print" aria-label="${t("Guardar como PDF", "Salva come PDF")}">${I.print}<span>PDF</span></button>
+    </div>`;
   }
 
   /* ---------- Vistas ---------- */
@@ -1008,8 +1016,7 @@
     sections.push(`<section class="pg"><div class="pg-title"><h2>Trascrizioni</h2><span>${t("Apéndice", "Appendice")}</span></div>${appendix}</section>`);
 
     printingBlank = false;
-    const modes = `<div class="seg" role="group" aria-label="Qué imprimir"><button type="button" data-act="printmode" data-mode="answers" aria-pressed="${!blank}">${t("Con mis respuestas", "Con le mie risposte")}</button><button type="button" data-act="printmode" data-mode="blank" aria-pressed="${blank}">${t("En blanco", "In bianco")}</button></div>`;
-    $app.innerHTML = `<div class="print-bar"><a class="btn-quiet" href="#/u/${u.n}">${I.left}${t("Volver", "Indietro")}</a>${modes}<button class="btn-primary" style="width:auto;padding:12px 20px;display:inline-flex;gap:8px;align-items:center" data-act="print">${I.print}${t("Guardar como PDF", "Salva come PDF")}</button></div>
+    $app.innerHTML = `${printBar(`#/u/${u.n}`, blank)}
       <article class="paper" lang="it">
         <div class="cover"><p>Quaderno · Italiano ${esc(u.level)}</p><h1>Unità ${u.n}<br>${esc(u.title)}</h1><p lang="es">${esc(u.goal)}</p><p style="font-size:.875rem">${t("Nombre", "Nome")}: ______________________ &nbsp; ${t("Fecha", "Data")}: ____________</p></div>
         ${sections.join("")}

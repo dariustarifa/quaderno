@@ -620,17 +620,40 @@ footer.credits {
 }
 
 /* ---------- Vista de impresión / PDF ---------- */
+/* Fija arriba, opaca y por debajo de la isla dinámica: sin desenfoque, siempre se puede pulsar. */
 .print-bar {
   position: sticky;
   top: 0;
   z-index: 10;
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--s2);
-  padding: var(--s4);
-  background: rgba(14, 14, 16, 0.9);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  margin: 0 calc(var(--s4) * -1);
+  padding: calc(env(safe-area-inset-top) + var(--s3)) var(--s4) var(--s3);
+  background: var(--bg-1);
+  box-shadow: 0 1px 0 var(--line);
+}
+.print-bar .icon-btn {
+  flex: none;
+}
+.print-bar .seg {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+.print-bar .seg button {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 4px;
+  font-size: 0.8125rem;
+}
+.print-bar .print-btn {
+  flex: none;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
 }
 .paper {
   max-width: 800px;
@@ -733,13 +756,8 @@ footer.credits {
   font-style: italic;
 }
 
-.print-bar .btn-quiet,
 .print-bar .btn-primary {
   white-space: nowrap;
-}
-.print-bar {
-  flex-wrap: wrap;
-  align-items: center;
 }
 .seg {
   display: inline-flex;
@@ -764,15 +782,7 @@ footer.credits {
   color: #0b0b0c;
   background: #f5f5f7;
 }
-@media screen and (max-width: 600px) {
-  .print-bar .seg {
-    order: 3;
-    width: 100%;
-  }
-  .seg button {
-    flex: 1;
-  }
-}
+
 @media screen and (max-width: 600px) {
   .paper {
     padding: 28px 20px;
@@ -782,6 +792,10 @@ footer.credits {
   }
   .paper .cover h1 {
     font-size: 2.5rem;
+  }
+  /* En pantalla, sin el hueco de portada: se reserva solo al imprimir. */
+  .paper .cover {
+    min-height: 0;
   }
 }
 
