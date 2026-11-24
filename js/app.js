@@ -898,7 +898,6 @@
       .join("");
 
     $app.innerHTML = `${topbar("Quaderno", "Italiano de cero a B2 · 2 unidades por semana")}
-      <div class="bento enter" style="margin-top:8px">${lead}</div>
       <h2 class="section-title">Temario<span>Toca un nivel para ver sus unidades</span></h2>
       <div class="levels enter">${levels}</div>
       <section class="settings">
