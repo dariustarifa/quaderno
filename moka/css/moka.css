@@ -923,3 +923,69 @@ html[data-level="B2"] { --lv: var(--b2); --lv-ink: #1c1d1b; --lv-soft: #c2c7c9; 
 .level-body .exam-row .n {
   color: var(--lv-soft);
 }
+
+/* ==========================================================================
+   v3 · Moka siempre en marcha, halo en la carga, sin desenfoque arriba
+   ========================================================================== */
+/* Moka corre en el sitio todo el rato mientras está en pantalla (salvo cuando celebra) */
+.moka:not(.is-party) .m-body { animation: moka-hop 0.34s ease-in-out infinite; }
+.moka:not(.is-party) .m-leg-l { animation: moka-step 0.34s ease-in-out infinite; }
+.moka:not(.is-party) .m-leg-r { animation: moka-step 0.34s ease-in-out -0.17s infinite; }
+.moka:not(.is-party) .m-arm-l { transform-origin: right top; animation: moka-swing 0.34s ease-in-out infinite; }
+.moka:not(.is-party) .m-arm-r { transform-origin: left top; animation: moka-swing 0.34s ease-in-out -0.17s infinite; }
+.moka.is-run .m-eyes { animation: moka-look 9s ease-in-out 2s infinite; }
+
+/* Halo detrás de Moka en la pantalla de carga: las patas negras se leen sobre el fondo negro */
+.mk-loader-moka {
+  position: relative;
+  isolation: isolate;
+}
+.mk-loader-moka::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -38%;
+  right: -38%;
+  top: -8%;
+  bottom: -24%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(243, 238, 228, 0.26), rgba(243, 238, 228, 0.12) 60%, rgba(243, 238, 228, 0) 100%);
+  pointer-events: none;
+}
+/* Suelo iluminado bajo las patas */
+.mk-loader-moka::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 4%;
+  right: 4%;
+  bottom: -9%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(243, 238, 228, 0.5), rgba(243, 238, 228, 0.18) 60%, rgba(243, 238, 228, 0) 100%);
+  pointer-events: none;
+}
+
+/* Desplegar niveles: lo anima JS; la flecha gira en cuanto empieza a cerrarse */
+.level-panel[open] .level-body { animation: none; }
+.level-panel.is-closing .chev,
+.side-level.is-closing summary::after { transform: none; }
+.level-panel .chev { transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Sin desenfoque ni contenido borroso bajo la barra de estado: franja opaca del color del fondo */
+html::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 95;
+  background: var(--bg-0);
+  pointer-events: none;
+}
+* { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .moka *, .moka { animation: none !important; }
+}

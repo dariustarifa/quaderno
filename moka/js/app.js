@@ -590,7 +590,7 @@
   // si el servidor no da un tamaño fiable (o llega comprimido), Moka espera en reposo con un mensaje y sin porcentaje.
   const Loader = {
     node: null,
-    show() {
+    show(instant) {
       if (!this.node) {
         this.node = document.createElement("div");
         this.node.className = "mk-loader";
@@ -600,7 +600,9 @@
       }
       this.set(null);
       this.node.hidden = false;
-      requestAnimationFrame(() => this.node.classList.add("is-on"));
+      // Al abrir la app aparece ya opaca (sin fundido) para que no se vea la página por detrás.
+      if (instant) this.node.classList.add("is-on");
+      else requestAnimationFrame(() => this.node.classList.add("is-on"));
     },
     set(frac) {
       if (!this.node) return;
@@ -630,31 +632,41 @@
       );
     },
   };
+  // Al abrir la app la carga dura al menos 2 s: el porcentaje avanza con el tiempo pero nunca por delante
+  // del progreso real (tipografía + primera pantalla), así que si algo tarda, espera.
   const Boot = {
     active: false,
     font: 0,
     view: 0,
+    MIN: 2000,
     start() {
       this.active = true;
-      Loader.show();
-      this.update();
-      const fontDone = () => {
-        this.font = 1;
-        this.update();
-      };
+      this.t0 = performance.now();
+      Loader.show(true);
+      const fontDone = () => (this.font = 1);
       // Sin conexión la fuente puede no llegar nunca: a los 2,5 s se da por hecha (se usa la del sistema).
       this.fonts = Promise.race([document.fonts ? document.fonts.load('900 40px "Archivo"') : Promise.resolve(), new Promise((r) => setTimeout(r, 2500))]).then(fontDone, fontDone);
+      const tick = () => {
+        if (!this.active) return;
+        this.update();
+        this.raf = requestAnimationFrame(tick);
+      };
+      tick();
     },
     update() {
-      if (this.active) Loader.set((this.font + this.view) / 2);
+      if (!this.active) return;
+      const t = Math.min(1, (performance.now() - this.t0) / this.MIN);
+      Loader.set(Math.min((this.font + this.view) / 2, t));
     },
     async viewReady() {
       this.view = 1;
-      this.update();
       await this.fonts;
-      await Loader.hide(500); // al 100 % se mantiene un instante y aparece la página
+      const left = this.MIN - (performance.now() - this.t0);
+      if (left > 0) await new Promise((r) => setTimeout(r, left));
+      cancelAnimationFrame(this.raf);
+      Loader.set(1);
+      await Loader.hide(450); // al 100 % se mantiene un instante y aparece la página
       this.active = false;
-      Moka.play("is-run", 1700);
     },
   };
   async function loadScript(url) {
@@ -1118,6 +1130,42 @@
 
   document.addEventListener("change", (e) => {
     if (e.target.id === "restore-file" && e.target.files[0]) restoreProgress(e.target.files[0]);
+  });
+
+  // Despliegue fluido de los niveles: la altura se abre con curva expo-out y las filas entran en cascada.
+  // Se puede interrumpir a mitad (vuelve a tocar y se recoge desde donde esté). Sin movimiento reducido.
+  const EXPO = "cubic-bezier(0.16, 1, 0.3, 1)";
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  document.addEventListener("click", (e) => {
+    const sum = e.target.closest(".level-panel > summary, .side-level > summary");
+    if (!sum || reduceMotion.matches) return;
+    e.preventDefault();
+    const d = sum.parentElement;
+    const from = d.getBoundingClientRect().height;
+    const opening = !d.open || d.classList.contains("is-closing");
+    if (d._anim) d._anim.cancel();
+    d.style.overflow = "hidden";
+    d.classList.toggle("is-closing", !opening);
+    if (opening) d.open = true;
+    let to = d.getBoundingClientRect().height;
+    if (!opening) {
+      d.open = false; // mide la altura cerrada y vuelve a abrir hasta que acabe la animación
+      to = d.getBoundingClientRect().height;
+      d.open = true;
+    }
+    const a = d.animate({ height: [`${from}px`, `${to}px`] }, { duration: opening ? 620 : 420, easing: EXPO });
+    d._anim = a;
+    if (opening && from <= sum.getBoundingClientRect().height + 4) {
+      [...d.querySelectorAll(".level-body > *, :scope > a")].slice(0, 18).forEach((row, i) =>
+        row.animate({ opacity: [0, 1], transform: ["translateY(14px)", "none"] }, { duration: 520, delay: 60 + i * 26, easing: EXPO, fill: "backwards" }),
+      );
+    }
+    a.onfinish = () => {
+      if (!opening) d.open = false;
+      d.classList.remove("is-closing");
+      d.style.overflow = "";
+      d._anim = null;
+    };
   });
 
   // Recuerda qué niveles dejaste abiertos.
