@@ -1049,3 +1049,19 @@ html[data-level="B2"] { --lv: var(--b2); --lv-ink: #1c1d1b; --lv-soft: #c2c7c9; 
   height: 24%;
   background: radial-gradient(closest-side, rgba(243, 238, 228, 0.5), rgba(243, 238, 228, 0.16) 60%, rgba(243, 238, 228, 0) 100%);
 }
+
+/* Borde superior sólido. iOS 26 solo pinta la zona de la hora con un color liso (sin degradado ni
+   desenfoque) si arriba del todo hay una barra fija y opaca de más de 10 px; si no, dibuja su velo.
+   Esta franja es esa barra: 12 px del color de la cabecera visible (lo pone paintTop en app.js). */
+.mk-edge {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  height: calc(env(safe-area-inset-top, 0px) + 12px);
+  background: #050506;
+  pointer-events: none;
+}
+@media print { .mk-edge { display: none; } }
+@media (hover: hover) and (pointer: fine) { .mk-edge { display: none; } }

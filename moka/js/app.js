@@ -1195,13 +1195,15 @@
   // Color de la barra de estado (iPhone): el de la cabecera de unidad mientras se ve; si no, el negro del fondo.
   // Sin black-translucent, iOS pinta la barra sólida con theme-color y el fondo de la página: queda unida, sin velo.
   const $theme = document.querySelector('meta[name="theme-color"]');
+  const $edge = document.querySelector(".mk-edge");
   let topRaf = 0;
   function paintTop() {
     topRaf = 0;
     const head = document.querySelector(".mk-unit");
-    const c = head && head.getBoundingClientRect().bottom > 8 ? getComputedStyle(head).backgroundColor : "#050506";
+    const c = head && head.getBoundingClientRect().bottom > 12 ? getComputedStyle(head).backgroundColor : "#050506";
     if ($theme && $theme.content !== c) $theme.content = c;
     document.documentElement.style.backgroundColor = c;
+    if ($edge) $edge.style.backgroundColor = c;
   }
   addEventListener("scroll", () => topRaf || (topRaf = requestAnimationFrame(paintTop)), { passive: true });
 
