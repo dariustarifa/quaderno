@@ -13,11 +13,13 @@ const window = { UNITS: {}, LEVELS: {} };
 global.window = window;
 const load = (f) => {
   try {
-    new Function("window", fs.readFileSync(f, "utf8"))(window);
+    new Function("window", "K", fs.readFileSync(f, "utf8"))(window, window.K);
   } catch (e) {
     console.error("No se pudo leer", f, e.message);
   }
 };
+load(path.join(root, "content/kit.js")); // las unidades desde la 14 usan el kit común (window.K)
+global.K = window.K;
 const unitFiles = fs.readdirSync(path.join(root, "content/units")).filter((f) => /^u\d+\.js$/.test(f));
 const wanted = which === "all" ? null : new Set(which.split(",").map(Number));
 for (const f of unitFiles) if (!wanted || wanted.has(+f.slice(1, -3))) load(path.join(root, "content/units", f));
@@ -82,13 +84,20 @@ for (const lines of scripts) {
   if (fs.existsSync(out)) continue;
   const roles = cast(lines);
   const parts = [];
+  let failed = false;
   lines.forEach((l, i) => {
+    if (failed) return;
+    const text = String(l.text).replace(/\s*\|\s*/g, ", ").trim();
+    if (!/[a-zà-ù0-9]/i.test(text)) return; // línea sin palabras (p. ej. «…»): no hay nada que leer
     const f = path.join(tmp, `${key}-${i}.mp3`);
-    const text = String(l.text).replace(/\s*\|\s*/g, ", ");
-    const r = spawnSync(edge, ["--voice", roles[l.who || ""], "--rate=-5%", "--text", text, "--write-media", f], { encoding: "utf8" });
-    if (r.status !== 0) throw new Error(`edge-tts falló: ${r.stderr}`);
-    parts.push(fs.readFileSync(f));
+    for (let tries = 0; tries < 3; tries++) {
+      const r = spawnSync(edge, ["--voice", roles[l.who || ""], "--rate=-5%", "--text", text, "--write-media", f], { encoding: "utf8" });
+      if (r.status === 0) return parts.push(fs.readFileSync(f));
+    }
+    console.error(`Sin audio para la línea «${text}» (${key}); el diálogo seguirá con la voz del dispositivo`);
+    failed = true;
   });
+  if (failed || !parts.length) continue;
   fs.writeFileSync(out, Buffer.concat(parts));
   made++;
   console.log(key, lines.length, "líneas", Object.entries(roles).map(([w, v]) => `${w}=${v.split("-")[2]}`).join(" "));
