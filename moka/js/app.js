@@ -414,7 +414,7 @@
           .join("")}</div>`;
         break;
     }
-    return `<section class="block${b.kind === "intro" ? " intro" : ""}" style="--i:${bi + 1}">${blockHead(b)}${body}</section>`;
+    return `<section class="block${b.kind === "intro" ? " intro" : ""}" style="--i:${bi + 1}">${b.kind === "intro" ? "" : `<span class="mk-bn" aria-hidden="true">${pad(bi + 1)}</span>`}${blockHead(b)}${body}</section>`;
   }
 
   /* ---------- Texto para corregir con IA ---------- */
@@ -549,7 +549,7 @@
   const MK_TANK = "M152 296 H298 L326 372 Q330 386 316 386 H134 Q120 386 124 372 Z";
   function mokaSvg(cls = "", label = "Moka") {
     const id = `mk${++mokaUid}`;
-    return `<svg class="moka ${cls}" viewBox="62 34 312 388" role="img" aria-label="${label}" fill="none" stroke="${MK_K}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><g class="m-leg m-leg-l"><path d="M182 386 V411 H166"/></g><g class="m-leg m-leg-r"><path d="M264 386 V411 H280"/></g><g class="m-body"><g class="m-arm m-arm-l"><path d="M156 296 Q128 300 110 321"/><circle cx="109" cy="322" r="7" fill="${MK_K}" stroke="none"/></g><g class="m-arm m-arm-r"><path d="M296 296 Q324 300 340 321"/><circle cx="341" cy="322" r="7" fill="${MK_K}" stroke="none"/></g><path d="M318 160 Q340 152 354 168 Q368 190 350 232 Q332 266 300 280 Z" fill="${MK_G}"/><path d="M322 178 Q336 186 330 214 Q324 240 306 262" stroke-width="12"/><path d="M104 146 H326 L300 293 H152 L112 194 Q102 172 78 160 Q76 150 104 146 Z" fill="${MK_G}"/><g class="m-lid"><path d="M214 104 Q196 82 198 64 Q202 47 216 47 Q232 48 236 64 Q236 82 222 104 Z" fill="${MK_G}"/><path d="M120 134 Q140 108 218 106 Q300 108 330 132 Z" fill="${MK_G}"/><path d="M116 138 H334"/></g><clipPath id="${id}"><path d="${MK_TANK}"/></clipPath><path d="${MK_TANK}" fill="${MK_G}" stroke="none"/><rect class="m-fill" x="118" y="290" width="214" height="100" fill="#e8742a" stroke="none" clip-path="url(#${id})"/><path d="M178 300 L168 382 M272 300 L282 382" stroke-width="8"/><path d="${MK_TANK}"/><g class="m-eyes" fill="${MK_K}" stroke="none"><circle cx="188" cy="215" r="7.5"/><circle cx="262" cy="215" r="7.5"/></g><path d="M209 238 Q225 252 241 238" stroke-width="7"/></g></svg>`;
+    return `<svg class="moka ${cls}" viewBox="62 34 312 388" role="img" aria-label="${label}" fill="none" stroke="${MK_K}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><g class="m-leg m-leg-l"><path d="M182 386 V411 H166"/></g><g class="m-leg m-leg-r"><path d="M264 386 V411 H280"/></g><g class="m-body"><g class="m-arm m-arm-l"><path d="M156 296 Q128 300 110 321"/><circle cx="109" cy="322" r="7" fill="${MK_K}" stroke="none"/></g><g class="m-arm m-arm-r"><path d="M296 296 Q324 300 340 321"/><circle cx="341" cy="322" r="7" fill="${MK_K}" stroke="none"/></g><path d="M318 160 Q340 152 354 168 Q368 190 350 232 Q332 266 300 280 Z" fill="${MK_G}"/><path d="M322 178 Q336 186 330 214 Q324 240 306 262" stroke-width="12"/><path d="M104 146 H326 L300 293 H152 L112 194 Q102 172 78 160 Q76 150 104 146 Z" fill="${MK_G}"/><g class="m-lid"><path d="M214 104 Q196 82 198 64 Q202 47 216 47 Q232 48 236 64 Q236 82 222 104 Z" fill="${MK_G}"/><path d="M120 134 Q140 108 218 106 Q300 108 330 132 Z" fill="${MK_G}"/><path d="M116 138 H334"/></g><clipPath id="${id}"><path d="${MK_TANK}"/></clipPath><path d="${MK_TANK}" fill="${MK_G}" stroke="none"/><g clip-path="url(#${id})"><rect class="m-fill" x="118" y="290" width="214" height="100" fill="#e8742a" stroke="none"/></g><path d="M178 300 L168 382 M272 300 L282 382" stroke-width="8"/><path d="${MK_TANK}"/><g class="m-eyes" fill="${MK_K}" stroke="none"><circle cx="188" cy="215" r="7.5"/><circle cx="262" cy="215" r="7.5"/></g><path d="M209 238 Q225 252 241 238" stroke-width="7"/></g></svg>`;
   }
   const Moka = {
     lastKey: null,
@@ -1061,9 +1061,9 @@
       .join("");
 
     $app.innerHTML = `<header class="mk-hero"><p class="mk-meta"><span>Italiano · A1 → B2</span><span>${C.units.length} unidades</span></p><div class="mk-title"><h1>Moka</h1><div class="mk-perch">${mokaSvg("moka-home")}</div></div><p class="mk-lede">Un café, una unidad. Italiano de cero a B2, a tu ritmo.</p></header>
-      <h2 class="section-title">Temario<span>Toca un nivel para ver sus unidades</span></h2>
+      <h2 class="section-title" id="temario">Temario<span>Toca un nivel para ver sus unidades</span></h2>
       <div class="levels enter">${levels}</div>
-      <section class="settings">
+      <section class="settings" id="ajustes">
         <h2 class="title">Cómo se usa</h2>
         <p class="muted">Cada unidad tiene 10 páginas y un examen, unas 2 horas en total. Ritmo recomendado: 2 unidades por semana. Cada tema empieza con una explicación corta; lo demás, búscalo (diccionario, WordReference, IA). Al final de cada nivel hay un examen de nivel. Responde hablando con el micro siempre que puedas. Al terminar una página, pulsa <b class="white">Copiar para corregir</b> y pégalo en ChatGPT o Claude.</p>
         <label class="field">Voz italiana<select id="voice-select"></select></label>
@@ -1077,7 +1077,8 @@
         ${standalone ? "" : `<p class="small muted" style="margin-top:12px"><b class="white">Instálalo en el móvil</b> para usarlo como una app y sin conexión. iPhone: ábrelo en Safari → Compartir → Añadir a pantalla de inicio. Android: ábrelo en Chrome → menú ⋮ → Instalar app.</p>`}
         <button class="btn-ghost danger" data-act="reset" style="width:auto;padding-left:0;margin-top:12px">Borrar todo el progreso</button>
       </section>
-      <footer class="credits">Moka · un café, una unidad</footer>`;
+      <footer class="credits">Moka · un café, una unidad</footer>
+      <nav class="mk-dock mk-tabs" aria-label="Secciones"><button type="button" class="mk-dock-btn" data-act="tab" data-to="temario" aria-current="true">Temario</button><button type="button" class="mk-dock-btn" data-act="tab" data-to="ajustes" aria-current="false">Ajustes</button></nav>`;
     fillVoiceSelect(document.getElementById("voice-select"));
   }
 
@@ -1131,6 +1132,34 @@
   document.addEventListener("change", (e) => {
     if (e.target.id === "restore-file" && e.target.files[0]) restoreProgress(e.target.files[0]);
   });
+
+  // Casillas en rojo (por rellenar) o verde (rellenas); el número del apartado se pone verde cuando está todo.
+  function markFields(root) {
+    if (!root) return;
+    const blocks = root.classList && root.classList.contains("block") ? [root] : root.querySelectorAll(".block");
+    blocks.forEach((b) => {
+      const fields = b.querySelectorAll(".in, .ta");
+      if (!fields.length) return b.removeAttribute("data-state");
+      let all = true;
+      fields.forEach((f) => {
+        const ok = f.value.trim() !== "";
+        f.classList.toggle("is-filled", ok);
+        f.classList.toggle("is-empty", !ok);
+        if (!ok) all = false;
+      });
+      b.dataset.state = all ? "done" : "todo";
+    });
+  }
+
+  // Portada en móvil: Temario y Ajustes llevan a su sección; la activa se marca según el scroll.
+  function syncTabs() {
+    const tabs = document.querySelector(".mk-tabs");
+    const set = document.getElementById("ajustes");
+    if (!tabs || !set) return;
+    const onSet = set.getBoundingClientRect().top < innerHeight * 0.55;
+    tabs.querySelectorAll("[data-to]").forEach((b) => b.setAttribute("aria-current", String((b.dataset.to === "ajustes") === onSet)));
+  }
+  addEventListener("scroll", syncTabs, { passive: true });
 
   // Despliegue fluido de los niveles: la altura se abre con curva expo-out y las filas entran en cascada.
   // Se puede interrumpir a mitad (vuelve a tocar y se recoge desde donde esté). Sin movimiento reducido.
@@ -1613,6 +1642,8 @@
     document.documentElement.dataset.level = lvNow || "";
     renderChrome(parts);
     window.scrollTo(0, 0);
+    markFields($app);
+    syncTabs();
     Moka.arrive(parts);
   }
   window.addEventListener("hashchange", router);
@@ -1680,7 +1711,10 @@
 
   /* ---------- Eventos ---------- */
   $app.addEventListener("input", (e) => {
-    if (e.target.dataset && e.target.dataset.key) persist(e.target);
+    if (e.target.dataset && e.target.dataset.key) {
+      persist(e.target);
+      markFields(e.target.closest(".block"));
+    }
   });
 
   $app.addEventListener("change", (e) => {
@@ -1700,6 +1734,11 @@
     const L = parts[0] === "level" ? window.LEVELS[parts[1]] : null;
     const u = L ? levelUnit(L) : window.UNITS[+parts[1]];
 
+    if (act === "tab") {
+      const el = document.getElementById(btn.dataset.to);
+      if (el) el.scrollIntoView({ behavior: reduceMotion.matches ? "auto" : "smooth", block: "start" });
+      return;
+    }
     if (act === "say") playButton(btn, [{ text: btn.dataset.say }], +btn.dataset.rate);
     else if (act === "script") playButton(btn, SCRIPTS[btn.dataset.bk] || [], +btn.dataset.rate);
     else if (act === "voicetest")
