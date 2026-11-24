@@ -1509,3 +1509,13 @@ body.inking .paper {
     margin-left: auto;
   }
 }
+.sync-steps {
+  margin: 8px 0 12px;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 6px;
+  line-height: 1.45;
+}
+.sync-steps a {
+  text-decoration: underline;
+}

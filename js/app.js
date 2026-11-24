@@ -34,10 +34,14 @@
   S.exam = S.exam || {};
   let saveTimer = 0;
   function save() {
+    S._savedAt = Date.now();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
         localStorage.setItem(STORE_KEY, JSON.stringify(S));
+      } catch (_) {}
+      try {
+        Sync.schedule();
       } catch (_) {}
     }, 250);
   }
@@ -907,6 +911,7 @@
         <h2 class="title" style="margin-top:20px">Tu progreso</h2>
         <p class="muted">Se guarda solo en este dispositivo y en este navegador, sin cuentas ni servidores. El móvil y el ordenador no se sincronizan: si quieres pasar tu progreso de uno a otro, o no perderlo al cambiar de móvil, guarda una copia y cárgala en el otro.</p>
         <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn-quiet" data-act="backup">Guardar copia</button><button class="btn-quiet" data-act="restore">Cargar copia</button><input type="file" id="restore-file" accept="application/json,.json" hidden /></div>
+        ${syncPanel()}
         ${standalone ? "" : `<p class="small muted" style="margin-top:12px"><b class="white">Instálalo en el móvil</b> para usarlo como una app y sin conexión. iPhone: ábrelo en Safari → Compartir → Añadir a pantalla de inicio. Android: ábrelo en Chrome → menú ⋮ → Instalar app.</p>`}
         <button class="btn-ghost danger" data-act="reset" style="width:auto;padding-left:0;margin-top:12px">Borrar todo el progreso</button>
       </section>
@@ -954,9 +959,7 @@
       const when = d.savedAt ? new Date(d.savedAt).toLocaleDateString("es-ES") : "fecha desconocida";
       if (!confirm(`¿Cargar la copia del ${when}? Sustituye el progreso de este dispositivo.`)) return;
       S = Object.assign({ answers: {}, done: {}, exam: {} }, p);
-      try {
-        localStorage.setItem(STORE_KEY, JSON.stringify(S));
-      } catch (_) {}
+      save();
       viewHome();
       toast("Progreso cargado");
     };
@@ -979,6 +982,168 @@
     },
     true,
   );
+
+  /* ---------- Sincronización entre dispositivos (Gist privado de GitHub) ----------
+     El progreso se guarda también en un gist privado de tu cuenta. Al abrir la web se descarga la
+     versión más reciente; cada cambio se sube unos segundos después. Gana la versión guardada más tarde.
+     El token vive solo en este dispositivo (no entra en las copias ni en el gist). */
+  const SYNC_KEY = "quaderno.sync";
+  const SYNC_FILE = "quaderno-progreso.json";
+  const Sync = {
+    cfg: (() => {
+      try {
+        return JSON.parse(localStorage.getItem(SYNC_KEY)) || null;
+      } catch (_) {
+        return null;
+      }
+    })(),
+    status: "",
+    timer: 0,
+    busy: false,
+    get on() {
+      return !!(this.cfg && this.cfg.token && this.cfg.gist);
+    },
+    store() {
+      try {
+        if (this.cfg) localStorage.setItem(SYNC_KEY, JSON.stringify(this.cfg));
+        else localStorage.removeItem(SYNC_KEY);
+      } catch (_) {}
+    },
+    setStatus(msg) {
+      this.status = msg;
+      const el = document.getElementById("sync-status");
+      if (el) el.textContent = msg;
+    },
+    async api(path, opts = {}) {
+      const r = await fetch(`https://api.github.com${path}`, {
+        ...opts,
+        headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${this.cfg.token}`, "Content-Type": "application/json", ...(opts.headers || {}) },
+      });
+      if (r.status === 401) throw new Error("token");
+      if (!r.ok) throw new Error(`http ${r.status}`);
+      return r.status === 204 ? null : r.json();
+    },
+    payload() {
+      return JSON.stringify({ app: "quaderno-italiano", version: 1, savedAt: S._savedAt || 0, progress: S });
+    },
+    async connect(token) {
+      this.cfg = { token: token.trim() };
+      try {
+        this.setStatus("Conectando…");
+        const user = await this.api("/user");
+        // ¿Ya existe un gist del Quaderno en esta cuenta? (si conectas un segundo dispositivo)
+        const gists = await this.api("/gists?per_page=100");
+        const found = gists.find((g) => g.files && g.files[SYNC_FILE]);
+        if (found) {
+          this.cfg.gist = found.id;
+          this.cfg.login = user.login;
+          this.store();
+          await this.pull(true);
+        } else {
+          const g = await this.api("/gists", {
+            method: "POST",
+            body: JSON.stringify({ description: "Quaderno · progreso (privado)", public: false, files: { [SYNC_FILE]: { content: this.payload() } } }),
+          });
+          this.cfg.gist = g.id;
+          this.cfg.login = user.login;
+          this.store();
+          this.setStatus("Sincronizado");
+        }
+        return true;
+      } catch (err) {
+        this.cfg = null;
+        this.store();
+        this.setStatus(err.message === "token" ? "El token no es válido o no tiene permiso de gist." : "No se pudo conectar. Revisa la conexión.");
+        return false;
+      }
+    },
+    disconnect() {
+      this.cfg = null;
+      this.store();
+      this.status = "";
+    },
+    // Descarga la versión remota. Si es más nueva, sustituye la local; si la local es más nueva, la sube.
+    async pull(force = false) {
+      if (!this.on || this.busy || !navigator.onLine) {
+        if (this.on && !navigator.onLine) this.setStatus("Sin conexión: se sincronizará al volver.");
+        return;
+      }
+      this.busy = true;
+      try {
+        const g = await this.api(`/gists/${this.cfg.gist}`);
+        const f = g.files[SYNC_FILE];
+        if (!f) throw new Error("missing");
+        const text = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+        const remote = JSON.parse(text);
+        const rAt = remote.savedAt || 0, lAt = S._savedAt || 0;
+        if (rAt > lAt && remote.progress) {
+          S = Object.assign({ answers: {}, done: {}, exam: {} }, remote.progress);
+          S._savedAt = rAt;
+          try {
+            localStorage.setItem(STORE_KEY, JSON.stringify(S));
+          } catch (_) {}
+          if (!document.activeElement || !document.activeElement.matches("input, textarea")) router();
+          this.setStatus("Actualizado con tu otro dispositivo");
+        } else if (lAt > rAt) {
+          this.busy = false;
+          return this.push();
+        } else this.setStatus("Sincronizado");
+      } catch (err) {
+        if (err.message === "missing" || err.message === "http 404") {
+          // Borraste el gist: se crea otro en la próxima conexión.
+          this.disconnect();
+          this.setStatus("No encuentro el gist. Vuelve a conectar.");
+        } else this.setStatus(err.message === "token" ? "El token ya no es válido. Vuelve a conectar." : "No se pudo sincronizar. Lo intentaré luego.");
+      } finally {
+        this.busy = false;
+      }
+    },
+    async push() {
+      if (!this.on || !navigator.onLine) return;
+      if (this.busy) return this.schedule();
+      this.busy = true;
+      try {
+        await this.api(`/gists/${this.cfg.gist}`, { method: "PATCH", body: JSON.stringify({ files: { [SYNC_FILE]: { content: this.payload() } } }) });
+        this.setStatus("Sincronizado");
+      } catch (err) {
+        this.setStatus(err.message === "token" ? "El token ya no es válido. Vuelve a conectar." : "No se pudo subir. Lo intentaré luego.");
+      } finally {
+        this.busy = false;
+      }
+    },
+    schedule() {
+      if (!this.on) return;
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => this.push(), 3000);
+    },
+  };
+  // Al volver a la app (otra pestaña, otro dispositivo usado entretanto) se comprueba si hay algo nuevo.
+  document.addEventListener("visibilitychange", () => {
+    if (!Sync.on) return;
+    if (document.visibilityState === "visible") Sync.pull();
+    else if (Sync.timer) {
+      clearTimeout(Sync.timer);
+      Sync.push();
+    }
+  });
+  addEventListener("online", () => Sync.pull());
+
+  function syncPanel() {
+    if (Sync.on)
+      return `<h2 class="title" style="margin-top:20px">Sincronización</h2>
+        <p class="muted">Conectado a GitHub${Sync.cfg.login ? ` como <b class="white">${esc(Sync.cfg.login)}</b>` : ""}. Tu progreso se guarda en un gist privado y se actualiza solo en todos tus dispositivos.</p>
+        <p class="small muted" id="sync-status" role="status">${esc(Sync.status || "Sincronizado")}</p>
+        <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn-quiet" data-act="sync-now">Sincronizar ahora</button><button class="btn-quiet" data-act="sync-off">Desconectar este dispositivo</button></div>`;
+    return `<h2 class="title" style="margin-top:20px">Sincronización</h2>
+      <p class="muted">Para tener el mismo progreso en el móvil y en el ordenador, guárdalo en un gist privado de tu cuenta de GitHub. Se hace una vez en cada dispositivo:</p>
+      <ol class="small muted sync-steps">
+        <li>Crea un token con <a class="white" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Quaderno" target="_blank" rel="noopener">este enlace</a>: deja marcado solo «gist» y, en «Expiration», elige «No expiration» (o la fecha que prefieras).</li>
+        <li>Copia el token y pégalo aquí. Usa el mismo token en todos tus dispositivos.</li>
+      </ol>
+      <label class="field">Token de GitHub<input id="sync-token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ghp_…" /></label>
+      <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap"><button class="btn-quiet" data-act="sync-connect">Conectar</button></div>
+      <p class="small muted" id="sync-status" role="status">${esc(Sync.status)}</p>`;
+  }
 
   // App instalable y sin conexión (solo funciona servido por http/https, no abriendo el archivo).
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
@@ -1411,14 +1576,32 @@
         $app.querySelectorAll("svg.ink").forEach(inkDraw);
       } else inkAction(act, btn);
     }
+    else if (act === "sync-connect") {
+      const tok = (document.getElementById("sync-token").value || "").trim();
+      if (!tok) return toast("Pega primero el token");
+      btn.disabled = true;
+      const ok = await Sync.connect(tok);
+      btn.disabled = false;
+      if (ok) {
+        viewHome();
+        toast("Sincronización activada");
+      }
+    } else if (act === "sync-now") Sync.pull();
+    else if (act === "sync-off") {
+      if (confirm("¿Desconectar este dispositivo? Tu progreso se queda aquí y en el gist, pero dejará de sincronizarse.")) {
+        Sync.disconnect();
+        viewHome();
+      }
+    }
     else if (act === "backup") backupProgress();
     else if (act === "restore") document.getElementById("restore-file").click();
     else if (act === "reset") {
-      if (confirm("¿Borrar todas tus respuestas, páginas hechas y notas? No se puede deshacer.")) {
+      if (confirm(`¿Borrar todas tus respuestas, páginas hechas y notas? No se puede deshacer.${Sync.on ? " También se borrará en tus otros dispositivos." : ""}`)) {
         S = { answers: {}, done: {}, exam: {} };
         try {
           localStorage.removeItem(STORE_KEY);
         } catch (_) {}
+        save(); // con sincronización, el borrado también llega a tus otros dispositivos
         viewHome();
         toast("Progreso borrado");
       }
@@ -1426,4 +1609,5 @@
   });
 
   router();
+  if (Sync.on) Sync.pull();
 })();

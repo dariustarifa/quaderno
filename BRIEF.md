@@ -200,7 +200,7 @@ Referencias de nivel: MCER, *Profilo della lingua italiana* (Spinelli & Parizzi)
 5. ✅ Unidades 17–32 (A2) y examen de nivel A2.
 6. ✅ B1 (33–56) y B2 (57–80), todo en italiano. Guía de redacción: content/AUTHORING.md. Revisión: `node tools/check.js`.
 7. ✅ Exámenes de nivel B1 (75 min) y B2 (90 min).
-8. ✅ PWA instalable y sin conexión, publicada en GitHub Pages: https://dariustarifa.github.io/quaderno/ (repo dariustarifa/quaderno). El progreso vive en el dispositivo; «Guardar copia / Cargar copia» lo pasa de uno a otro.
+8. ✅ PWA instalable y sin conexión, publicada en GitHub Pages: https://dariustarifa.github.io/quaderno/ (repo dariustarifa/quaderno). El progreso vive en el dispositivo y, si se conecta un token de GitHub (permiso gist), se sincroniza solo con un gist privado «quaderno-progreso.json» (gana la versión guardada más tarde). «Guardar copia / Cargar copia» sigue disponible.
 9. ⏳ Más adelante: ejercicios dinámicos tipo app, mascota en las introducciones (y como icono).
 
 ### Cómo se publica un cambio
